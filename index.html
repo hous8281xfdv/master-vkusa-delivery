@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Мастер Вкуса — премиум доставка еды в Новороссийске</title>
+    <title>Мастер Вкуса — яркая доставка еды в Новороссийске</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <canvas id="bgCanvas"></canvas>
 
     <header class="header">
         <div class="container">
@@ -31,48 +30,54 @@
     </header>
 
     <section class="hero">
-        <div class="hero-overlay"></div>
+        <div class="hero-bg"></div>
         <div class="container hero-content">
-            <h2>Еда, которая говорит сама за себя</h2>
-            <p>г. Новороссийск, ул. Анапское шоссе 91а<br>вход с парковки KFC</p>
-            <a href="#menu" class="btn-primary">Смотреть меню <i class="fas fa-arrow-down"></i></a>
+            <span class="hero-badge">🔥 ХИТ СЕЗОНА 🔥</span>
+            <h2>Еда, от которой<br><span class="gradient-text">теряешь голову</span></h2>
+            <p>г. Новороссийск, ул. Анапское шоссе 91а (вход с парковки KFC)</p>
+            <div class="hero-buttons">
+                <a href="#menu" class="btn-primary">Смотреть меню <i class="fas fa-arrow-down"></i></a>
+                <a href="#contacts" class="btn-secondary">Связаться <i class="fas fa-heart"></i></a>
+            </div>
         </div>
     </section>
 
     <main>
         <div class="container" id="menu">
             <div class="section-header">
-                <h2 class="section-title">Наше меню</h2>
+                <span class="section-tag">НАШИ БЛЮДА</span>
+                <h2 class="section-title">Выбери свой <span class="gradient-text">вкус</span></h2>
                 <div class="glow-line"></div>
             </div>
             <div id="menuGrid" class="menu-grid"></div>
         </div>
 
-        <!-- Блок контактов и отзывов -->
-        <div class="container contacts-section">
+        <!-- Блок контактов -->
+        <div class="container contacts-section" id="contacts">
             <div class="section-header">
-                <h2 class="section-title">Связь и отзывы</h2>
+                <span class="section-tag">СВЯЗЬ И ОТЗЫВЫ</span>
+                <h2 class="section-title">Всегда на <span class="gradient-text">связи</span></h2>
                 <div class="glow-line"></div>
             </div>
             
             <div class="contacts-grid">
-                <div class="contact-card glass-card">
-                    <i class="fas fa-phone-alt"></i>
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-phone-alt"></i></div>
                     <h3>Звоните нам</h3>
-                    <a href="tel:+79892405659">+7‒989‒240‒56‒59</a>
-                    <a href="tel:+79880000109">+7‒988‒000‒01‒09</a>
+                    <a href="tel:+79892405659">+7 989 240‑56‑59</a>
+                    <a href="tel:+79880000109">+7 988 000‑01‑09</a>
                     <small>Принимаем заказы 10:00–22:00</small>
                 </div>
 
-                <div class="contact-card glass-card">
-                    <i class="fab fa-vk"></i>
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fab fa-vk"></i></div>
                     <h3>ВКонтакте</h3>
                     <a href="https://vk.ru/id193397921" target="_blank">vk.ru/id193397921</a>
                     <small>Акции, новости, живое общение</small>
                 </div>
 
-                <div class="contact-card glass-card">
-                    <i class="fas fa-star"></i>
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-star"></i></div>
                     <h3>Оставить отзыв</h3>
                     <div class="review-links">
                         <a href="https://yandex.ru/maps/org/master_vkusa/110800337892/" target="_blank" class="review-btn yandex">
@@ -90,7 +95,7 @@
 
     <!-- Модалка корзины -->
     <div id="cartModal" class="modal">
-        <div class="modal-content glass-card">
+        <div class="modal-content">
             <span class="close">&times;</span>
             <h2><i class="fas fa-bag-shopping"></i> Корзина</h2>
             <div id="cartItems" class="cart-items-list"></div>
@@ -101,7 +106,7 @@
 
     <!-- Модалка заказа -->
     <div id="orderModal" class="modal">
-        <div class="modal-content glass-card">
+        <div class="modal-content">
             <span class="close-order">&times;</span>
             <h2><i class="fas fa-clipboard-list"></i> Детали доставки</h2>
             <form id="orderForm">
