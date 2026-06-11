@@ -65,11 +65,12 @@ const menuData = [
 let cart = [];
 let currentCategory = "ГОВЯДИНА";
 
-// Корзина
 function updateCartUI() {
     const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
-    document.getElementById('cartCount').innerText = totalItems;
-    document.getElementById('mobileCartCount').innerText = totalItems;
+    const cartCountSpan = document.getElementById('cartCount');
+    const mobileCartCountSpan = document.getElementById('mobileCartCount');
+    if (cartCountSpan) cartCountSpan.innerText = totalItems;
+    if (mobileCartCountSpan) mobileCartCountSpan.innerText = totalItems;
     localStorage.setItem('savedCart', JSON.stringify(cart));
     
     const cartDiv = document.getElementById('cartItems');
@@ -77,7 +78,8 @@ function updateCartUI() {
     
     if (cart.length === 0) {
         cartDiv.innerHTML = '<p style="text-align:center; padding:20px;">🍔 Корзина пуста. Добавьте блюдо!</p>';
-        document.getElementById('cartTotalPrice').innerText = '0';
+        const totalSpan = document.getElementById('cartTotalPrice');
+        if (totalSpan) totalSpan.innerText = '0';
         return;
     }
     
@@ -87,13 +89,14 @@ function updateCartUI() {
         const sum = item.price * item.quantity;
         total += sum;
         html += `<div class="cart-item">
-                    <span><strong>${item.name}</strong> x${item.quantity}</span>
+                    <span><strong>${escapeHtml(item.name)}</strong> x${item.quantity}</span>
                     <span>${sum} ₽</span>
                     <button class="cart-item-remove" data-index="${idx}">✕</button>
                 </div>`;
     });
     cartDiv.innerHTML = html;
-    document.getElementById('cartTotalPrice').innerText = total;
+    const totalSpan = document.getElementById('cartTotalPrice');
+    if (totalSpan) totalSpan.innerText = total;
     
     document.querySelectorAll('.cart-item-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -124,6 +127,7 @@ function escapeHtml(str) {
 function renderCategoryChips() {
     const cats = [...new Map(menuData.map(i => [i.category, i.category])).values()];
     const wrapper = document.getElementById('categoriesWrapper');
+    if (!wrapper) return;
     wrapper.innerHTML = '';
     cats.forEach(cat => {
         const chip = document.createElement('div');
@@ -142,7 +146,8 @@ function renderMenuByCategory() {
     const items = menuData.filter(i => i.category === currentCategory);
     const container = document.getElementById('menuGrid');
     const titleSpan = document.getElementById('activeCategoryTitle');
-    titleSpan.innerHTML = currentCategory;
+    if (titleSpan) titleSpan.innerHTML = currentCategory;
+    if (!container) return;
     
     container.innerHTML = '';
     items.forEach(item => {
@@ -171,45 +176,58 @@ function renderMenuByCategory() {
 }
 
 // Отправка в Max
-document.getElementById('orderForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = document.getElementById('customerName').value.trim();
-    const address = document.getElementById('customerAddress').value.trim();
-    const payment = document.getElementById('paymentMethod').value;
-    
-    if (!name || !address) return alert('Заполните имя и адрес доставки!');
-    if (cart.length === 0) return alert('Корзина пуста!');
-    
-    let itemsText = '';
-    let total = 0;
-    cart.forEach(item => {
-        total += item.price * item.quantity;
-        itemsText += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
+const orderForm = document.getElementById('orderForm');
+if (orderForm) {
+    orderForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('customerName').value.trim();
+        const address = document.getElementById('customerAddress').value.trim();
+        const payment = document.getElementById('paymentMethod').value;
+        
+        if (!name || !address) return alert('Заполните имя и адрес доставки!');
+        if (cart.length === 0) return alert('Корзина пуста!');
+        
+        let itemsText = '';
+        let total = 0;
+        cart.forEach(item => {
+            total += item.price * item.quantity;
+            itemsText += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
+        });
+        
+        const message = `🍔 НОВЫЙ ЗАКАЗ МАСТЕР ВКУСА 🍔\n\n👤 Клиент: ${name}\n📍 Адрес: ${address}\n💳 Оплата: ${payment}\n\n📋 ЗАКАЗ:\n${itemsText}\n💰 ИТОГО: ${total} ₽\n\n🚀 Доставка 10:00–22:00. Ждём вас!`;
+        const encoded = encodeURIComponent(message);
+        window.open(`https://max.ru/u/${MAX_USER_ID}?text=${encoded}`, '_blank');
+        
+        if (confirm('Заказ отправлен! Очистить корзину?')) {
+            cart = [];
+            updateCartUI();
+        }
+        document.getElementById('orderModal').style.display = 'none';
     });
-    
-    const message = `🍔 НОВЫЙ ЗАКАЗ МАСТЕР ВКУСА 🍔\n\n👤 Клиент: ${name}\n📍 Адрес: ${address}\n💳 Оплата: ${payment}\n\n📋 ЗАКАЗ:\n${itemsText}\n💰 ИТОГО: ${total} ₽\n\n🚀 Доставка 10:00–22:00. Ждём вас!`;
-    const encoded = encodeURIComponent(message);
-    window.open(`https://max.ru/u/${MAX_USER_ID}?text=${encoded}`, '_blank');
-    
-    if (confirm('Заказ отправлен! Очистить корзину?')) {
-        cart = [];
-        updateCartUI();
-    }
-    document.getElementById('orderModal').style.display = 'none';
-});
+}
 
 // Модалки
-document.getElementById('cartIcon')?.addEventListener('click', () => document.getElementById('cartModal').style.display = 'block');
-document.getElementById('mobileCartLink')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('cartModal').style.display = 'block';
-    document.getElementById('mobileNav').classList.remove('active');
-});
-document.getElementById('checkoutBtn')?.addEventListener('click', () => {
-    if (cart.length === 0) return alert('Корзина пуста!');
-    document.getElementById('cartModal').style.display = 'none';
-    document.getElementById('orderModal').style.display = 'block';
-});
+const cartIcon = document.getElementById('cartIcon');
+if (cartIcon) {
+    cartIcon.addEventListener('click', () => document.getElementById('cartModal').style.display = 'block');
+}
+const mobileCartLink = document.getElementById('mobileCartLink');
+if (mobileCartLink) {
+    mobileCartLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('cartModal').style.display = 'block';
+        const mobileNav = document.getElementById('mobileNav');
+        if (mobileNav) mobileNav.classList.remove('active');
+    });
+}
+const checkoutBtn = document.getElementById('checkoutBtn');
+if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', () => {
+        if (cart.length === 0) return alert('Корзина пуста!');
+        document.getElementById('cartModal').style.display = 'none';
+        document.getElementById('orderModal').style.display = 'block';
+    });
+}
 document.querySelectorAll('.close, .close-order').forEach(btn => {
     btn.onclick = function() {
         document.getElementById('cartModal').style.display = 'none';
@@ -223,18 +241,27 @@ window.onclick = (e) => {
 // Бургер-меню
 const burger = document.getElementById('burgerMenu');
 const mobileNav = document.getElementById('mobileNav');
-burger?.addEventListener('click', () => {
-    mobileNav.classList.toggle('active');
-});
-document.querySelectorAll('.mobile-link').forEach(link => {
-    link.addEventListener('click', () => {
-        mobileNav.classList.remove('active');
+if (burger && mobileNav) {
+    burger.addEventListener('click', () => {
+        mobileNav.classList.toggle('active');
     });
-});
+    document.querySelectorAll('.mobile-link').forEach(link => {
+        link.addEventListener('click', () => {
+            mobileNav.classList.remove('active');
+        });
+    });
+}
 
 // Загрузка корзины
 const saved = localStorage.getItem('savedCart');
-if (saved) try { cart = JSON.parse(saved); if (!Array.isArray(cart)) cart = []; } catch(e) { cart = []; }
+if (saved) {
+    try {
+        cart = JSON.parse(saved);
+        if (!Array.isArray(cart)) cart = [];
+    } catch(e) {
+        cart = [];
+    }
+}
 
 renderCategoryChips();
 renderMenuByCategory();
