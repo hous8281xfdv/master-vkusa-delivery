@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мастер Вкуса | Доставка в Новороссийске</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Шапка сайта -->
+    <header class="header">
+        <div class="container">
+            <div class="logo-block">
+                <img src="logo.jpg" alt="Мастер Вкуса" class="header-logo">
+                <div>
+                    <div class="brand-name">Мастер Вкуса</div>
+                    <div class="slogan">Почувствуй вкус настоящего огня!</div>
+                </div>
+            </div>
+            <div class="info-block">
+                <p>📍 ул. Анапское шоссе 91а (вход с парковки KFC)</p>
+                <p>🕒 Пн-Вс с 10:00 до 22:00</p>
+            </div>
+            <button class="cart-btn" onclick="toggleCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
+        </div>
+    </header>
+
+    <!-- Главный баннер -->
+    <section class="hero">
+        <h1>Самый вкусный шашлык и шаурма города!</h1>
+        <p>Быстрая доставка прямо к вашему столу в Новороссийске</p>
+        <a href="#menu-anchor" class="btn-hero">Перейти к меню</a>
+    </section>
+
+    <!-- Основное меню -->
+    <main class="container-menu" id="menu-anchor">
+        
+        <!-- ГОВЯДИНА -->
+        <h2 class="category-title">Блюда из говядины 🥩</h2>
+        <div class="menu-grid">
+            <div class="card"><h3>Big-Бургер</h3><p class="price">450 ₽</p><button onclick="addToCart('Big-Бургер (Говядина)', 450)">В корзину</button></div>
+            <div class="card"><h3>Шаурма стандарт</h3><p class="price">450 ₽</p><button onclick="addToCart('Шаурма стандарт (Говядина)', 450)">В корзину</button></div>
+            <div class="card"><h3>Шаурма большая</h3><p class="price">550 ₽</p><button onclick="addToCart('Шаурма большая (Говядина)', 550)">В корзину</button></div>
+            <div class="card"><h3>Сырная стандарт</h3><p class="price">470 ₽</p><button onclick="addToCart('Сырная стандарт (Говядина)', 470)">В корзину</button></div>
+            <div class="card"><h3>Сырная большая</h3><p class="price">550 ₽</p><button onclick="addToCart('Сырная большая (Говядина)', 550)">В корзину</button></div>
+            <div class="card"><h3>Сэндвич</h3><p class="price">450 ₽</p><button onclick="addToCart('Сэндвич (Говядина)', 450)">В корзину</button></div>
+            <div class="card"><h3>Пита</h3><p class="price">400 ₽</p><button onclick="addToCart('Пита (Говядина)', 400)">В корзину</button></div>
+            <div class="card"><h3>Гирос</h3><p class="price">500 ₽</p><button onclick="addToCart('Гирос (Говядина)', 500)">В корзину</button></div>
+            <div class="card"><h3>Гирос на тарелке</h3><p class="price">600 ₽</p><button onclick="addToCart('Гирос на тарелке (Говядина)', 600)">В корзину</button></div>
+            <div class="card"><h3>Люля-кебаб в лаваше</h3><p class="price">400 ₽</p><button onclick="addToCart('Люля-кебаб в лаваше (Говядина)', 400)">В корзину</button></div>
+        </div>
+
+        <!-- СВИНИНА -->
+        <h2 class="category-title">Блюда из свинины 🐷</h2>
+        <div class="menu-grid">
+            <div class="card"><h3>Шаурма стандарт</h3><p class="price">270 ₽</p><button onclick="addToCart('Шаурма стандарт (Свинина)', 270)">В корзину</button></div>
+            <div class="card"><h3>Шаурма большая</h3><p class="price">320 ₽</p><button onclick="addToCart('Шаурма большая (Свинина)', 320)">В корзину</button></div>
+            <div class="card"><h3>Сырная стандарт</h3><p class="price">290 ₽</p><button onclick="addToCart('Сырная стандарт (Свинина)', 290)">В корзину</button></div>
+            <div class="card"><h3>Сырная большая</h3><p class="price">340 ₽</p><button onclick="addToCart('Сырная большая (Свинина)', 340)">В корзину</button></div>
+            <div class="card"><h3>Сэндвич</h3><p class="price">350 ₽</p><button onclick="addToCart('Сэндвич (Свинина)', 350)">В корзину</button></div>
+            <div class="card"><h3>Пита Greek</h3><p class="price">290 ₽</p><button onclick="addToCart('Пита Greek (Свинина)', 290)">В корзину</button></div>
+            <div class="card"><h3>Гирос</h3><p class="price">350 ₽</p><button onclick="addToCart('Гирос (Свинина)', 350)">В корзину</button></div>
+            <div class="card"><h3>Гирос на тарелке</h3><p class="price">400 ₽</p><button onclick="addToCart('Гирос на тарелке (Свинина)', 400)">В корзину</button></div>
+        </div>
+
+        <!-- КУРИЦА -->
+        <h2 class="category-title">Блюда из курицы 🍗</h2>
+        <div class="menu-grid">
+            <div class="card"><h3>Big-Бургер</h3><p class="price">370 ₽</p><button onclick="addToCart('Big-Бургер (Курица)', 370)">В корзину</button></div>
+            <div class="card"><h3>Шаурма стандарт</h3><p class="price">270 ₽</p><button onclick="addToCart('Шаурма стандарт (Курица)', 270)">В корзину</button></div>
+            <div class="card"><h3>Шаурма большая</h3><p class="price">320 ₽</p><button onclick="addToCart('Шаурма большая (Курица)', 320)">В корзину</button></div>
+            <div class="card"><h3>Сырная ст.</h3><p class="price">290 ₽</p><button onclick="addToCart('Сырная стандарт (Курица)', 290)">В корзину</button></div>
+            <div class="card"><h3>Сырная большая</h3><p class="price">340 ₽</p><button onclick="addToCart('Сырная большая (Курица)', 340)">В корзину</button></div>
+            <div class="card"><h3>Сэндвич</h3><p class="price">350 ₽</p><button onclick="addToCart('Сэндвич (Курица)', 350)">В корзину</button></div>
+            <div class="card"><h3>Пита Greek</h3><p class="price">290 ₽</p><button onclick="addToCart('Пита Greek (Курица)', 290)">В корзину</button></div>
+            <div class="card"><h3>Гирос</h3><p class="price">350 ₽</p><button onclick="addToCart('Гирос (Курица)', 350)">В корзину</button></div>
+            <div class="card"><h3>Гирос на тарелке</h3><p class="price">400 ₽</p><button onclick="addToCart('Гирос на тарелке (Курица)', 400)">В корзину</button></div>
+            <div class="card"><h3>Люля-кебаб в лаваше</h3><p class="price">350 ₽</p><button onclick="addToCart('Люля-кебаб в лаваше (Курица)', 350)">В корзину</button></div>
+        </div>
+
+        <!-- КРЕВЕТКИ -->
+        <h2 class="category-title">Блюда с креветками 🍤</h2>
+        <div class="menu-grid">
+            <div class="card"><h3>Шаурма стандарт</h3><p class="price">390 ₽</p><button onclick="addToCart('Шаурма стандарт (Креветки)', 390)">В корзину</button></div>
+            <div class="card"><h3>Шаурма большая</h3><p class="price">530 ₽</p><button onclick="addToCart('Шаурма большая (Креветки)', 530)">В корзину</button></div>
+            <div class="card"><h3>Сырная стандарт</h3><p class="price">420 ₽</p><button onclick="addToCart('Сырная стандарт (Креветки)', 420)">В корзину</button></div>
+            <div class="card"><h3>Сырная большая</h3><p class="price">550 ₽</p><button onclick="addToCart('Сырная большая (Креветки)', 550)">В корзину</button></div>
+            <div class="card"><h3>Пита Greek</h3><p class="price">400 ₽</p><button onclick="addToCart('Пита Greek (Креветки)', 400)">В корзину</button></div>
+            <div class="card"><h3>Сэндвич</h3><p class="price">400 ₽</p><button onclick="addToCart('Сэндвич (Креветки)', 400)">В корзину</button></div>
+            <div class="card"><h3>Гирос</h3><p class="price">500 ₽</p><button onclick="addToCart('Гирос (Креветки)', 500)">В корзину</button></div>
+            <div class="card"><h3>Гирос на тарелке</h3><p class="price">600 ₽</p><button onclick="addToCart('Гирос на тарелке (Креветки)', 600)">В корзину</button></div>
+        </div>
+
+        <!-- ВЕГАН МЕНЮ -->
+        <h2 class="category-title">Веган меню (с овощами на гриле) 🌱</h2>
+        <div class="menu-grid">
+            <div class="card"><h3>Шаурма стандарт</h3><p class="price">270 ₽</p><button onclick="addToCart('Шаурма стандарт (Веган)', 270)">В корзину</button></div>
+            <div class="card"><h3>Шаурма большая</h3><p class="price">320 ₽</p><button onclick="addToCart('Шаурма большая (Веган)', 320)">В корзину</button></div>
+            <div class="card"><h3>Сырная стандарт</h3><p class="price">300 ₽</p><button onclick="addToCart('Сырная стандарт (Веган)', 300)">В корзину</button></div>
+            <div class="card"><h3>Сырная большая</h3><p class="price">350 ₽</p><button onclick="addToCart('Сырная большая (Веган)', 350)">В корзину</button></div>
+            <div class="card"><h3>Пита Greek</h3><p class="price">290 ₽</p><button onclick="addToCart('Пита Greek (Веган)', 290)">В корзину</button></div>
+            <div class="card"><h3>Гирос</h3><p class="price">350 ₽</p><button onclick="addToCart('Гирос (Веган)', 350)">В корзину</button></div>
+            <div class="card"><h3>Гирос на тарелке</h3><p class="price">400 ₽</p><button onclick="addToCart('Гирос на тарелке (Веган)', 400)">В корзину</button></div>
+        </div>
+
+        <!-- ГАРНИРЫ, СНЕКИ, ДОБАВКИ -->
+        <h2 class="category-title">Гарниры, снеки и добавки 🍟</h2>
+        <div class="menu-grid">
+            <div class="card"><h3>Картофель фри (порц. / 200г)</h3><p class="price">200 ₽</p><button onclick="addToCart('Картофель фри', 200)">В корзину</button></div>
+            <div class="card"><h3>Картофель по-деревенски (порц. / 200г)</h3><p class="price">200 ₽</p><button onclick="addToCart('Картофель по-деревенски', 200)">В корзину</button></div>
+            <div class="card"><h3>Луковые кольца (10 шт)</h3><p class="price">250 ₽</p><button onclick="addToCart('Луковые кольца', 250)">В корзину</button></div>
+            <div class="card"><h3>Сырные палочки (5 шт)</h3><p class="price">250 ₽</p><button onclick="addToCart('Сырные палочки', 250)">В корзину</button></div>
+            <div class="card"><h3>Сыр чеддер (Добавка)</h3><p class="price">40 ₽</p><button onclick="addToCart('Сыр чеддер', 40)">В корзину</button></div>
