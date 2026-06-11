@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Мастер Вкуса - Доставка еды в Новороссийске</title>
+    <title>Мастер Вкуса — премиум доставка еды в Новороссийске</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Font Awesome для иконок -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 
+    <canvas id="bgCanvas"></canvas>
+
     <header class="header">
         <div class="container">
             <div class="logo-wrapper">
-                <img src="logo.jpg" alt="Кафе Мастер Вкуса" class="logo-img" onerror="this.src='https://placehold.co/60x60?text=Логотип'">
+                <img src="logo.jpg" alt="Мастер Вкуса" class="logo-img" onerror="this.src='https://placehold.co/70x70?text=MV'">
                 <div class="logo-text">
                     <h1>Мастер Вкуса</h1>
                     <p>Почувствуй вкус настоящего огня!</p>
                 </div>
             </div>
             <div class="header-info">
-                <div class="hours"><i class="fas fa-clock"></i> 10:00 - 22:00</div>
+                <div class="hours"><i class="fas fa-clock"></i> 10:00 – 22:00</div>
                 <div class="cart-icon" id="cartIcon">
-                    <i class="fas fa-shopping-cart"></i>
+                    <i class="fas fa-bag-shopping"></i>
                     <span id="cartCount" class="cart-count">0</span>
                 </div>
             </div>
@@ -30,55 +31,103 @@
     </header>
 
     <section class="hero">
-        <div class="container">
-            <h2>Лучшая еда на гриле в городе</h2>
-            <p>г. Новороссийск, ул. Анапское шоссе 91а (вход с парковки KFC)</p>
-            <a href="#menu" class="btn-primary">Смотреть меню</a>
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+            <h2>Еда, которая говорит сама за себя</h2>
+            <p>г. Новороссийск, ул. Анапское шоссе 91а<br>вход с парковки KFC</p>
+            <a href="#menu" class="btn-primary">Смотреть меню <i class="fas fa-arrow-down"></i></a>
         </div>
     </section>
 
-    <main class="main">
+    <main>
         <div class="container" id="menu">
-            <h2 class="section-title">Наше меню</h2>
-            <div class="menu-grid" id="menuGrid"></div>
+            <div class="section-header">
+                <h2 class="section-title">Наше меню</h2>
+                <div class="glow-line"></div>
+            </div>
+            <div id="menuGrid" class="menu-grid"></div>
+        </div>
+
+        <!-- Блок контактов и отзывов -->
+        <div class="container contacts-section">
+            <div class="section-header">
+                <h2 class="section-title">Связь и отзывы</h2>
+                <div class="glow-line"></div>
+            </div>
+            
+            <div class="contacts-grid">
+                <div class="contact-card glass-card">
+                    <i class="fas fa-phone-alt"></i>
+                    <h3>Звоните нам</h3>
+                    <a href="tel:+79892405659">+7‒989‒240‒56‒59</a>
+                    <a href="tel:+79880000109">+7‒988‒000‒01‒09</a>
+                    <small>Принимаем заказы 10:00–22:00</small>
+                </div>
+
+                <div class="contact-card glass-card">
+                    <i class="fab fa-vk"></i>
+                    <h3>ВКонтакте</h3>
+                    <a href="https://vk.ru/id193397921" target="_blank">vk.ru/id193397921</a>
+                    <small>Акции, новости, живое общение</small>
+                </div>
+
+                <div class="contact-card glass-card">
+                    <i class="fas fa-star"></i>
+                    <h3>Оставить отзыв</h3>
+                    <div class="review-links">
+                        <a href="https://yandex.ru/maps/org/master_vkusa/110800337892/" target="_blank" class="review-btn yandex">
+                            <i class="fab fa-yandex"></i> Яндекс.Карты
+                        </a>
+                        <a href="https://2gis.ru/novorossiysk/firm/70000001045162228" target="_blank" class="review-btn dgis">
+                            <i class="fas fa-map-marker-alt"></i> 2ГИС
+                        </a>
+                    </div>
+                    <small>Нам важно ваше мнение ❤️</small>
+                </div>
+            </div>
         </div>
     </main>
 
-    <!-- Модальное окно корзины -->
+    <!-- Модалка корзины -->
     <div id="cartModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content glass-card">
             <span class="close">&times;</span>
-            <h2>Ваша корзина</h2>
-            <div id="cartItems"></div>
+            <h2><i class="fas fa-bag-shopping"></i> Корзина</h2>
+            <div id="cartItems" class="cart-items-list"></div>
             <div class="cart-total">Итого: <span id="cartTotalPrice">0</span> ₽</div>
-            <button id="checkoutBtn" class="btn-checkout">Оформить заказ</button>
+            <button id="checkoutBtn" class="btn-checkout">Оформить заказ →</button>
         </div>
     </div>
 
-    <!-- Модальное окно оформления заказа -->
+    <!-- Модалка заказа -->
     <div id="orderModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content glass-card">
             <span class="close-order">&times;</span>
-            <h2>Детали заказа</h2>
+            <h2><i class="fas fa-clipboard-list"></i> Детали доставки</h2>
             <form id="orderForm">
-                <label>Ваше имя:</label>
-                <input type="text" id="customerName" required placeholder="Иван">
-                <label>Адрес доставки:</label>
-                <input type="text" id="customerAddress" required placeholder="ул. Ленина, д.5, кв.12">
-                <label>Способ оплаты:</label>
+                <label>Ваше имя</label>
+                <input type="text" id="customerName" placeholder="Алексей" required>
+                <label>Адрес доставки</label>
+                <input type="text" id="customerAddress" placeholder="ул. Красная, 12, кв. 5" required>
+                <label>Оплата</label>
                 <select id="paymentMethod">
                     <option value="Наличные">Наличные курьеру</option>
                     <option value="Карта">Карта курьеру</option>
                 </select>
-                <button type="submit" class="btn-submit-order">Отправить в WhatsApp</button>
+                <button type="submit" class="btn-submit-order">Отправить в Max →</button>
             </form>
         </div>
     </div>
 
     <footer class="footer">
         <div class="container">
-            <p>© 2025 Кафе «Мастер Вкуса». Все права защищены.</p>
-            <p>Работаем для вас с любовью к еде 🔥</p>
+            <p>© 2025 Мастер Вкуса — доставка огня в каждом укусе</p>
+            <div class="social-icons">
+                <a href="https://vk.ru/id193397921" target="_blank"><i class="fab fa-vk"></i></a>
+                <a href="tel:+79892405659"><i class="fas fa-phone-alt"></i></a>
+                <a href="https://yandex.ru/maps/org/master_vkusa/110800337892/" target="_blank"><i class="fab fa-yandex"></i></a>
+                <a href="https://2gis.ru/novorossiysk/firm/70000001045162228" target="_blank"><i class="fas fa-map-marker-alt"></i></a>
+            </div>
         </div>
     </footer>
 
