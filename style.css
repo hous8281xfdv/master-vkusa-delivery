@@ -36,6 +36,31 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
+/* Плавающая кнопка уведомлений */
+.enable-notif-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    background: #ff7e33;
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 99;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: 0.2s;
+}
+.enable-notif-btn:hover {
+    transform: scale(1.05);
+    background: #ffb347;
+}
+
 /* Бургер */
 .burger-menu {
     display: none;
@@ -74,7 +99,7 @@ body {
 .mobile-nav.active { left: 0; }
 .mobile-nav ul { list-style: none; }
 .mobile-nav ul li { margin: 25px 0; }
-.mobile-nav ul li a {
+.mobile-nav ul li a, .notif-btn-mobile {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -82,6 +107,10 @@ body {
     font-weight: 500;
     color: #2d1b0e;
     text-decoration: none;
+    background: none;
+    border: none;
+    width: 100%;
+    cursor: pointer;
 }
 @media (max-width: 768px) {
     .burger-menu { display: flex; }
@@ -599,19 +628,8 @@ form input, form select {
     flex-wrap: wrap;
     gap: 15px;
 }
-.send-notif-btn {
-    background: #ff7e33;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 40px;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 .admin-orders-list {
-    max-height: 500px;
+    max-height: 400px;
     overflow-y: auto;
 }
 .admin-order-item {
@@ -638,8 +656,36 @@ form input, form select {
     font-weight: 700;
 }
 .admin-order-items {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #b45f2b;
+    margin: 8px 0;
+}
+.admin-order-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.complete-order-btn {
+    background: #2d6a2d;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 40px;
+    color: white;
+    cursor: pointer;
+}
+.complete-order-btn:hover {
+    background: #1e4a1e;
+}
+.notify-client-btn {
+    background: #ff7e33;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 40px;
+    color: white;
+    cursor: pointer;
+}
+.notify-client-btn:hover {
+    background: #ffb347;
 }
 
 /* Footer */
@@ -670,4 +716,5 @@ form input, form select {
     .section-header h2 { font-size: 1.6rem; }
     .cart-item { flex-wrap: wrap; gap: 10px; }
     .cart-item-controls { margin-left: auto; }
+    .enable-notif-btn { bottom: 80px; width: 45px; height: 45px; font-size: 1rem; }
 }
