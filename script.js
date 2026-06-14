@@ -1,5 +1,4 @@
 // === НАСТРОЙКИ ===
-const PHONE_NUMBER = '79880000109';
 const ADMIN_PASSWORD = 'Aram-Gril';
 
 const menuData = [
@@ -87,23 +86,23 @@ async function initNotifications() {
         notificationPermission = permission === 'granted';
         if (notificationPermission) {
             console.log('Уведомления разрешены');
+            showToast('🔔 Уведомления включены');
         }
     }
 }
 
-function sendNotification(title, body) {
-    if (notificationPermission && document.visibilityState === 'visible') {
+function sendNotificationToClient(title, body, orderId = null) {
+    if (notificationPermission) {
         new Notification(title, {
             body: body,
             icon: 'https://master-vkusa-delivery.vercel.app/logo.jpg',
-            badge: 'https://master-vkusa-delivery.vercel.app/logo.jpg'
+            badge: 'https://master-vkusa-delivery.vercel.app/logo.jpg',
+            tag: orderId ? `order_${orderId}` : 'general',
+            renotify: true
         });
-    } else if (notificationPermission) {
-        new Notification(title, {
-            body: body,
-            icon: 'https://master-vkusa-delivery.vercel.app/logo.jpg'
-        });
+        return true;
     }
+    return false;
 }
 
 // Корзина
@@ -113,6 +112,7 @@ function loadCart() {
     const savedOrders = localStorage.getItem('masterVkusaOrders');
     if (savedOrders) orders = JSON.parse(savedOrders);
     updateCartUI();
+    renderAdminOrders();
 }
 
 function saveCart() {
@@ -159,8 +159,11 @@ function updateCartUI() {
     let total = 0;
     let html = '';
     cart.forEach((item, idx) => {
-        const sum = item.price * item.quantity;
-        total += sum;
+        let itemTotal = item.price * item.quantity;
+        if (item.extras && item.extras.length > 0) {
+            item.extras.forEach(extra => { itemTotal += extra.price * item.quantity; });
+        }
+        total += itemTotal;
         let extrasHtml = '';
         if (item.extras && item.extras.length > 0) {
             extrasHtml = `<div style="font-size:0.7rem; color:#b45f2b; margin-top:4px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
@@ -320,15 +323,16 @@ function initMaps() {
     });
 }
 
-function sendToMax(message) {
-    const url = `https://max.ru/u/${PHONE_NUMBER}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-}
-
 function addOrder(order) {
     orders.unshift(order);
     saveOrders();
     renderAdminOrders();
+    // Отправляем уведомление конкретному клиенту
+    sendNotificationToClient(
+        'Мастер Вкуса', 
+        `${order.name}, ваш заказ принят! Сумма: ${order.total} ₽. Ожидайте подтверждения.`,
+        order.id
+    );
 }
 
 function renderAdminOrders() {
@@ -339,7 +343,7 @@ function renderAdminOrders() {
         return;
     }
     container.innerHTML = orders.map(order => `
-        <div class="admin-order-item">
+        <div class="admin-order-item" data-order-id="${order.id}">
             <div class="admin-order-header">
                 <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
                 <span class="admin-order-total">💰 ${order.total} ₽</span>
@@ -347,9 +351,30 @@ function renderAdminOrders() {
             </div>
             <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
             <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
-            <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ')}</div>
+            <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras && i.extras.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
+            <div class="admin-order-actions" style="margin-top:12px; display:flex; gap:10px;">
+                <button class="notify-client-btn" data-order-id="${order.id}" data-client-name="${escapeHtml(order.name)}" style="background:#ff7e33; border:none; padding:6px 16px; border-radius:40px; color:white; cursor:pointer;">
+                    <i class="fas fa-bell"></i> Отправить уведомление "${order.name}"
+                </button>
+            </div>
         </div>
     `).join('');
+    
+    document.querySelectorAll('.notify-client-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const clientName = btn.dataset.clientName;
+            const orderId = btn.dataset.orderId;
+            const order = orders.find(o => o.id == orderId);
+            if (order) {
+                sendNotificationToClient(
+                    'Мастер Вкуса',
+                    `${clientName}, ваш заказ готов! Можете прийти или ожидайте курьера 🔥`,
+                    orderId
+                );
+                showToast(`✅ Уведомление отправлено ${clientName}`);
+            }
+        });
+    });
 }
 
 document.getElementById('orderForm')?.addEventListener('submit', (e) => {
@@ -367,7 +392,6 @@ document.getElementById('orderForm')?.addEventListener('submit', (e) => {
         return;
     }
     
-    let itemsText = '';
     let total = 0;
     cart.forEach(item => {
         let itemTotal = item.price * item.quantity;
@@ -377,15 +401,7 @@ document.getElementById('orderForm')?.addEventListener('submit', (e) => {
             });
         }
         total += itemTotal;
-        let extrasText = '';
-        if (item.extras && item.extras.length > 0) {
-            extrasText = ` + ${item.extras.map(e => e.name).join(', ')}`;
-        }
-        itemsText += `• ${item.name} x${item.quantity} = ${itemTotal} ₽${extrasText}\n`;
     });
-    
-    const message = `🍔 НОВЫЙ ЗАКАЗ MASTER ВКУСА 🍔\n\n👤 Клиент: ${name}\n📍 Адрес: ${address}\n💳 Оплата: ${payment}\n\n📋 ЗАКАЗ:\n${itemsText}\n💰 ИТОГО: ${total} ₽\n\n🚀 Доставка 10:00–22:00. Позвоните клиенту.`;
-    sendToMax(message);
     
     addOrder({
         id: Date.now(),
@@ -401,6 +417,7 @@ document.getElementById('orderForm')?.addEventListener('submit', (e) => {
     saveCart();
     updateCartUI();
     document.getElementById('orderModal').style.display = 'none';
+    document.getElementById('orderForm').reset();
     showToast('✅ Заказ отправлен!');
 });
 
@@ -456,10 +473,6 @@ document.getElementById('adminLoginForm')?.addEventListener('submit', (e) => {
     } else {
         showToast('❌ Неверный пароль', true);
     }
-});
-document.getElementById('sendNotificationBtn')?.addEventListener('click', () => {
-    sendNotification('Мастер Вкуса', 'Ваш заказ готов! Можете прийти или ожидайте курьера 🔥');
-    showToast('✅ Уведомление отправлено клиентам');
 });
 
 // Бургер
