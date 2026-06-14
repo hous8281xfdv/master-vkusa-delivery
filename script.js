@@ -1,4 +1,6 @@
+// === НАСТРОЙКИ ===
 const PHONE_NUMBER = '79880000109';
+const ADMIN_PASSWORD = 'Aram-Gril';
 
 const menuData = [
     { category: "ГОВЯДИНА", name: "Big-Бургер", price: 450 },
@@ -63,12 +65,53 @@ const menuData = [
     { category: "НАПИТКИ", name: "Вода негазированная", price: 80 }
 ];
 
+const extrasOptions = [
+    { name: "Сыр чеддер", price: 40 },
+    { name: "Фри (добавка)", price: 40 },
+    { name: "Перец Холопеньо", price: 40 },
+    { name: "Сырные палочки", price: 50 },
+    { name: "Овощи гриль", price: 40 }
+];
+
 let cart = [];
 let currentFilter = 'all';
+let currentExtrasItemIndex = null;
+let orders = [];
 
+// Push-уведомления
+let notificationPermission = false;
+
+async function initNotifications() {
+    if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        notificationPermission = permission === 'granted';
+        if (notificationPermission) {
+            console.log('Уведомления разрешены');
+        }
+    }
+}
+
+function sendNotification(title, body) {
+    if (notificationPermission && document.visibilityState === 'visible') {
+        new Notification(title, {
+            body: body,
+            icon: 'https://master-vkusa-delivery.vercel.app/logo.jpg',
+            badge: 'https://master-vkusa-delivery.vercel.app/logo.jpg'
+        });
+    } else if (notificationPermission) {
+        new Notification(title, {
+            body: body,
+            icon: 'https://master-vkusa-delivery.vercel.app/logo.jpg'
+        });
+    }
+}
+
+// Корзина
 function loadCart() {
     const saved = localStorage.getItem('masterVkusaCart');
     if (saved) cart = JSON.parse(saved);
+    const savedOrders = localStorage.getItem('masterVkusaOrders');
+    if (savedOrders) orders = JSON.parse(savedOrders);
     updateCartUI();
 }
 
@@ -76,9 +119,14 @@ function saveCart() {
     localStorage.setItem('masterVkusaCart', JSON.stringify(cart));
 }
 
-function showToast(message) {
+function saveOrders() {
+    localStorage.setItem('masterVkusaOrders', JSON.stringify(orders));
+}
+
+function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
     toast.innerText = message;
+    toast.style.background = isError ? '#e63946' : '#ff7e33';
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
@@ -113,19 +161,59 @@ function updateCartUI() {
     cart.forEach((item, idx) => {
         const sum = item.price * item.quantity;
         total += sum;
+        let extrasHtml = '';
+        if (item.extras && item.extras.length > 0) {
+            extrasHtml = `<div style="font-size:0.7rem; color:#b45f2b; margin-top:4px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
+        }
         html += `
-            <div class="cart-item">
-                <span><strong>${escapeHtml(item.name)}</strong> x${item.quantity}</span>
-                <span>${sum} ₽</span>
-                <button class="cart-item-remove" data-index="${idx}">✕</button>
+            <div class="cart-item" data-index="${idx}">
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${escapeHtml(item.name)}</div>
+                    ${extrasHtml}
+                </div>
+                <div class="cart-item-controls">
+                    <button class="cart-item-dec" data-index="${idx}">-</button>
+                    <span>${item.quantity}</span>
+                    <button class="cart-item-inc" data-index="${idx}">+</button>
+                    <button class="cart-item-extras" data-index="${idx}" style="background:#fff0e3; border:none; padding:5px 10px; border-radius:30px;">➕</button>
+                    <button class="cart-item-remove" data-index="${idx}">✕</button>
+                </div>
             </div>
         `;
     });
     cartDiv.innerHTML = html;
     document.getElementById('cartTotalPrice').innerText = total;
     
+    document.querySelectorAll('.cart-item-dec').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            if (cart[idx].quantity > 1) {
+                cart[idx].quantity--;
+            } else {
+                cart.splice(idx, 1);
+            }
+            saveCart();
+            updateCartUI();
+            showToast('Количество обновлено');
+        });
+    });
+    document.querySelectorAll('.cart-item-inc').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            cart[idx].quantity++;
+            saveCart();
+            updateCartUI();
+            showToast('Количество обновлено');
+        });
+    });
+    document.querySelectorAll('.cart-item-extras').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentExtrasItemIndex = parseInt(btn.dataset.index);
+            openExtrasModal();
+        });
+    });
     document.querySelectorAll('.cart-item-remove').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             const idx = parseInt(btn.dataset.index);
             cart.splice(idx, 1);
             saveCart();
@@ -135,12 +223,43 @@ function updateCartUI() {
     });
 }
 
+function openExtrasModal() {
+    const item = cart[currentExtrasItemIndex];
+    document.getElementById('extrasItemName').innerText = item.name;
+    const container = document.getElementById('extrasList');
+    container.innerHTML = extrasOptions.map(extra => `
+        <div class="extras-item">
+            <label>
+                <input type="checkbox" value="${extra.name}" data-price="${extra.price}" ${item.extras && item.extras.some(e => e.name === extra.name) ? 'checked' : ''}>
+                ${extra.name} (+${extra.price} ₽)
+            </label>
+        </div>
+    `).join('');
+    document.getElementById('extrasModal').style.display = 'block';
+}
+
+document.getElementById('extrasSaveBtn')?.addEventListener('click', () => {
+    const item = cart[currentExtrasItemIndex];
+    const selectedExtras = [];
+    document.querySelectorAll('#extrasList input:checked').forEach(cb => {
+        selectedExtras.push({
+            name: cb.value,
+            price: parseInt(cb.dataset.price)
+        });
+    });
+    item.extras = selectedExtras;
+    saveCart();
+    updateCartUI();
+    document.getElementById('extrasModal').style.display = 'none';
+    showToast('Добавки сохранены');
+});
+
 function addToCart(name, price) {
     const exist = cart.find(i => i.name === name);
     if (exist) {
         exist.quantity++;
     } else {
-        cart.push({ name, price, quantity: 1 });
+        cart.push({ name, price, quantity: 1, extras: [] });
     }
     saveCart();
     updateCartUI();
@@ -163,7 +282,7 @@ function renderMenu() {
                     <span class="item-name">${escapeHtml(item.name)}</span>
                     <span class="item-price">${item.price} ₽</span>
                 </div>
-                <div class="card-category" style="font-size:0.7rem; color:#aa8a6a; margin-top:5px;">${escapeHtml(item.category)}</div>
+                <div style="font-size:0.7rem; color:#b45f2b; margin-top:5px;">${escapeHtml(item.category)}</div>
             </div>
             <button class="btn-add" data-name="${escapeHtml(item.name)}" data-price="${item.price}">
                 <i class="fas fa-cart-plus"></i> В корзину
@@ -206,6 +325,33 @@ function sendToMax(message) {
     window.open(url, '_blank');
 }
 
+function addOrder(order) {
+    orders.unshift(order);
+    saveOrders();
+    renderAdminOrders();
+}
+
+function renderAdminOrders() {
+    const container = document.getElementById('ordersList');
+    if (!container) return;
+    if (orders.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:20px;">Нет заказов</p>';
+        return;
+    }
+    container.innerHTML = orders.map(order => `
+        <div class="admin-order-item">
+            <div class="admin-order-header">
+                <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
+                <span class="admin-order-total">💰 ${order.total} ₽</span>
+                <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
+            </div>
+            <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
+            <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
+            <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ')}</div>
+        </div>
+    `).join('');
+}
+
 document.getElementById('orderForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('customerName').value.trim();
@@ -213,35 +359,55 @@ document.getElementById('orderForm')?.addEventListener('submit', (e) => {
     const payment = document.getElementById('paymentMethod').value;
     
     if (!name || !address) {
-        showToast('❌ Заполните имя и адрес');
+        showToast('❌ Заполните имя и адрес', true);
         return;
     }
     if (cart.length === 0) {
-        showToast('❌ Корзина пуста');
+        showToast('❌ Корзина пуста', true);
         return;
     }
     
     let itemsText = '';
     let total = 0;
     cart.forEach(item => {
-        total += item.price * item.quantity;
-        itemsText += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
+        let itemTotal = item.price * item.quantity;
+        if (item.extras) {
+            item.extras.forEach(extra => {
+                itemTotal += extra.price * item.quantity;
+            });
+        }
+        total += itemTotal;
+        let extrasText = '';
+        if (item.extras && item.extras.length > 0) {
+            extrasText = ` + ${item.extras.map(e => e.name).join(', ')}`;
+        }
+        itemsText += `• ${item.name} x${item.quantity} = ${itemTotal} ₽${extrasText}\n`;
     });
     
     const message = `🍔 НОВЫЙ ЗАКАЗ MASTER ВКУСА 🍔\n\n👤 Клиент: ${name}\n📍 Адрес: ${address}\n💳 Оплата: ${payment}\n\n📋 ЗАКАЗ:\n${itemsText}\n💰 ИТОГО: ${total} ₽\n\n🚀 Доставка 10:00–22:00. Позвоните клиенту.`;
     sendToMax(message);
     
-    if (confirm('Заказ отправлен! Очистить корзину?')) {
-        cart = [];
-        saveCart();
-        updateCartUI();
-    }
+    addOrder({
+        id: Date.now(),
+        name,
+        address,
+        payment,
+        items: cart.map(i => ({ name: i.name, quantity: i.quantity, extras: i.extras })),
+        total,
+        date: new Date().toISOString()
+    });
+    
+    cart = [];
+    saveCart();
+    updateCartUI();
     document.getElementById('orderModal').style.display = 'none';
+    showToast('✅ Заказ отправлен!');
 });
 
 // Модалки
 const cartModal = document.getElementById('cartModal');
 const orderModal = document.getElementById('orderModal');
+const adminModal = document.getElementById('adminModal');
 
 document.getElementById('cartIcon')?.addEventListener('click', () => cartModal.style.display = 'block');
 document.getElementById('mobileCartLink')?.addEventListener('click', (e) => {
@@ -251,22 +417,50 @@ document.getElementById('mobileCartLink')?.addEventListener('click', (e) => {
 });
 document.getElementById('checkoutBtn')?.addEventListener('click', () => {
     if (cart.length === 0) {
-        showToast('❌ Корзина пуста');
+        showToast('❌ Корзина пуста', true);
         return;
     }
     cartModal.style.display = 'none';
     orderModal.style.display = 'block';
 });
-document.querySelectorAll('.close, .close-order').forEach(btn => {
+document.querySelectorAll('.close, .close-order, .close-admin, .close-extras').forEach(btn => {
     btn.onclick = () => {
         cartModal.style.display = 'none';
         orderModal.style.display = 'none';
+        adminModal.style.display = 'none';
+        document.getElementById('extrasModal').style.display = 'none';
     };
 });
 window.onclick = (e) => {
     if (e.target === cartModal) cartModal.style.display = 'none';
     if (e.target === orderModal) orderModal.style.display = 'none';
+    if (e.target === adminModal) adminModal.style.display = 'none';
+    if (e.target === document.getElementById('extrasModal')) document.getElementById('extrasModal').style.display = 'none';
 };
+
+// Админ панель
+document.getElementById('adminPanelBtn')?.addEventListener('click', () => adminModal.style.display = 'block');
+document.getElementById('mobileAdminLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    adminModal.style.display = 'block';
+    document.getElementById('mobileNav')?.classList.remove('active');
+});
+document.getElementById('adminLoginForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pwd = document.getElementById('adminPassword').value;
+    if (pwd === ADMIN_PASSWORD) {
+        document.getElementById('adminLoginForm').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        renderAdminOrders();
+        showToast('Добро пожаловать в админ панель');
+    } else {
+        showToast('❌ Неверный пароль', true);
+    }
+});
+document.getElementById('sendNotificationBtn')?.addEventListener('click', () => {
+    sendNotification('Мастер Вкуса', 'Ваш заказ готов! Можете прийти или ожидайте курьера 🔥');
+    showToast('✅ Уведомление отправлено клиентам');
+});
 
 // Бургер
 const burger = document.getElementById('burgerMenu');
@@ -283,6 +477,9 @@ if (burger && mobileNav) {
         });
     });
 }
+
+// Запрос уведомлений при загрузке
+initNotifications();
 
 loadCart();
 renderMenu();
