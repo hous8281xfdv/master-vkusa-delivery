@@ -21,6 +21,7 @@
             <li><a href="#map" class="mobile-link">📍 Карта</a></li>
             <li><a href="#contacts" class="mobile-link">📞 Контакты</a></li>
             <li><a href="#" id="mobileCartLink">🛒 Корзина <span id="mobileCartCount">0</span></a></li>
+            <li><a href="#" id="mobileAdminLink">🛡️ Админ</a></li>
         </ul>
     </nav>
 
@@ -41,6 +42,7 @@
                     <i class="fas fa-bag-shopping"></i>
                     <span id="cartCount" class="cart-count">0</span>
                 </div>
+                <button class="admin-btn" id="adminPanelBtn"><i class="fas fa-user-shield"></i></button>
             </div>
         </div>
     </header>
@@ -137,6 +139,17 @@
         </div>
     </div>
 
+    <!-- Модалка добавок -->
+    <div id="extrasModal" class="modal">
+        <div class="modal-content">
+            <span class="close-extras">&times;</span>
+            <h2><i class="fas fa-plus-circle"></i> Добавки</h2>
+            <p style="margin-bottom:15px;">Выберите добавки для <strong id="extrasItemName"></strong></p>
+            <div id="extrasList" class="extras-list"></div>
+            <button id="extrasSaveBtn" class="btn-submit">Сохранить →</button>
+        </div>
+    </div>
+
     <!-- Модалка заказа -->
     <div id="orderModal" class="modal">
         <div class="modal-content">
@@ -154,6 +167,26 @@
                 </select>
                 <button type="submit" class="btn-submit">Отправить заказ →</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Админ панель -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content admin-panel">
+            <span class="close-admin">&times;</span>
+            <h2><i class="fas fa-lock"></i> Админ панель</h2>
+            <form id="adminLoginForm">
+                <label>Пароль</label>
+                <input type="password" id="adminPassword" placeholder="Введите пароль">
+                <button type="submit" class="btn-submit">Войти</button>
+            </form>
+            <div id="adminContent" style="display:none;">
+                <div class="admin-header">
+                    <h3>📋 Заказы клиентов</h3>
+                    <button id="sendNotificationBtn" class="send-notif-btn"><i class="fas fa-bell"></i> Отправить уведомление "Заказ готов"</button>
+                </div>
+                <div id="ordersList" class="admin-orders-list"></div>
+            </div>
         </div>
     </div>
 
