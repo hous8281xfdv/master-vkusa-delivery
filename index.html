@@ -22,10 +22,14 @@
             <li><a href="#contacts" class="mobile-link">📞 Контакты</a></li>
             <li><a href="#" id="mobileCartLink">🛒 Корзина <span id="mobileCartCount">0</span></a></li>
             <li><a href="#" id="mobileAdminLink">🛡️ Админ</a></li>
+            <li><button id="mobileEnableNotificationsBtn" class="notif-btn-mobile">🔔 Включить уведомления</button></li>
         </ul>
     </nav>
 
     <div id="toast" class="toast"></div>
+
+    <!-- Плавающая кнопка включения уведомлений -->
+    <button id="enableNotificationsBtn" class="enable-notif-btn"><i class="fas fa-bell"></i> Включить уведомления</button>
 
     <header class="header">
         <div class="container">
@@ -182,10 +186,13 @@
             </form>
             <div id="adminContent" style="display:none;">
                 <div class="admin-header">
-                    <h3>📋 Заказы клиентов</h3>
-                    <button id="sendNotificationBtn" class="send-notif-btn"><i class="fas fa-bell"></i> Отправить уведомление "Заказ готов"</button>
+                    <h3>📋 Активные заказы</h3>
                 </div>
                 <div id="ordersList" class="admin-orders-list"></div>
+                <div class="admin-header" style="margin-top:30px;">
+                    <h3>📦 Архив (выполненные заказы)</h3>
+                </div>
+                <div id="completedOrdersList" class="admin-orders-list"></div>
             </div>
         </div>
     </div>
