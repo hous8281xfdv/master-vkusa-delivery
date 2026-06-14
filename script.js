@@ -1,5 +1,6 @@
 // === НАСТРОЙКИ ===
 const ADMIN_PASSWORD = 'Aram-Gril';
+const PHONE_NUMBER = '79880000109';
 
 const menuData = [
     { category: "ГОВЯДИНА", name: "Big-Бургер", price: 450 },
@@ -76,66 +77,37 @@ let cart = [];
 let currentFilter = 'all';
 let currentExtrasItemIndex = null;
 let orders = [];
-let completedOrders = [];
-
-// Push-уведомления
 let notificationPermission = false;
 
-async function requestNotificationPermission() {
+async function initNotifications() {
     if ('Notification' in window) {
         const permission = await Notification.requestPermission();
         notificationPermission = permission === 'granted';
-        if (notificationPermission) {
-            showToast('🔔 Уведомления включены!');
-        } else {
-            showToast('❌ Уведомления не разрешены', true);
-        }
-    } else {
-        showToast('❌ Ваш браузер не поддерживает уведомления', true);
+        if (notificationPermission) showToast('🔔 Уведомления включены');
     }
 }
 
-function sendNotificationToClient(title, body, tag = null) {
+function sendNotificationToClient(title, body, orderId = null) {
     if (notificationPermission) {
-        try {
-            new Notification(title, {
-                body: body,
-                icon: '/logo.jpg',
-                badge: '/logo.jpg',
-                tag: tag,
-                renotify: true
-            });
-            return true;
-        } catch(e) {
-            console.log('Ошибка уведомления:', e);
-            return false;
-        }
-    } else {
-        showToast('❌ Сначала включите уведомления через кнопку 🔔', true);
-        return false;
+        new Notification(title, {
+            body: body,
+            icon: 'https://master-vkusa.vercel.app/logo.jpg',
+            tag: orderId ? `order_${orderId}` : 'general'
+        });
     }
 }
 
-// Корзина
 function loadCart() {
     const saved = localStorage.getItem('masterVkusaCart');
     if (saved) cart = JSON.parse(saved);
     const savedOrders = localStorage.getItem('masterVkusaOrders');
     if (savedOrders) orders = JSON.parse(savedOrders);
-    const savedCompleted = localStorage.getItem('masterVkusaCompletedOrders');
-    if (savedCompleted) completedOrders = JSON.parse(savedCompleted);
     updateCartUI();
     renderAdminOrders();
 }
 
-function saveCart() {
-    localStorage.setItem('masterVkusaCart', JSON.stringify(cart));
-}
-
-function saveOrders() {
-    localStorage.setItem('masterVkusaOrders', JSON.stringify(orders));
-    localStorage.setItem('masterVkusaCompletedOrders', JSON.stringify(completedOrders));
-}
+function saveCart() { localStorage.setItem('masterVkusaCart', JSON.stringify(cart)); }
+function saveOrders() { localStorage.setItem('masterVkusaOrders', JSON.stringify(orders)); }
 
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
@@ -146,20 +118,13 @@ function showToast(message, isError = false) {
 }
 
 function escapeHtml(str) {
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+    return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
 }
 
 function updateCartUI() {
     const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
-    const cartCount = document.getElementById('cartCount');
-    const mobileCartCount = document.getElementById('mobileCartCount');
-    if (cartCount) cartCount.innerText = totalItems;
-    if (mobileCartCount) mobileCartCount.innerText = totalItems;
+    document.getElementById('cartCount').innerText = totalItems;
+    document.getElementById('mobileCartCount').innerText = totalItems;
     
     const cartDiv = document.getElementById('cartItems');
     if (!cartDiv) return;
@@ -174,12 +139,12 @@ function updateCartUI() {
     let html = '';
     cart.forEach((item, idx) => {
         let itemTotal = item.price * item.quantity;
-        if (item.extras && item.extras.length > 0) {
+        if (item.extras?.length) {
             item.extras.forEach(extra => { itemTotal += extra.price * item.quantity; });
         }
         total += itemTotal;
         let extrasHtml = '';
-        if (item.extras && item.extras.length > 0) {
+        if (item.extras?.length) {
             extrasHtml = `<div style="font-size:0.7rem; color:#b45f2b; margin-top:4px;">+ ${item.extras.map(e => e.name).join(', ')}</div>`;
         }
         html += `
@@ -204,13 +169,9 @@ function updateCartUI() {
     document.querySelectorAll('.cart-item-dec').forEach(btn => {
         btn.addEventListener('click', () => {
             const idx = parseInt(btn.dataset.index);
-            if (cart[idx].quantity > 1) {
-                cart[idx].quantity--;
-            } else {
-                cart.splice(idx, 1);
-            }
-            saveCart();
-            updateCartUI();
+            if (cart[idx].quantity > 1) cart[idx].quantity--;
+            else cart.splice(idx, 1);
+            saveCart(); updateCartUI();
             showToast('Количество обновлено');
         });
     });
@@ -218,8 +179,7 @@ function updateCartUI() {
         btn.addEventListener('click', () => {
             const idx = parseInt(btn.dataset.index);
             cart[idx].quantity++;
-            saveCart();
-            updateCartUI();
+            saveCart(); updateCartUI();
             showToast('Количество обновлено');
         });
     });
@@ -233,8 +193,7 @@ function updateCartUI() {
         btn.addEventListener('click', () => {
             const idx = parseInt(btn.dataset.index);
             cart.splice(idx, 1);
-            saveCart();
-            updateCartUI();
+            saveCart(); updateCartUI();
             showToast('Товар удалён');
         });
     });
@@ -247,7 +206,7 @@ function openExtrasModal() {
     container.innerHTML = extrasOptions.map(extra => `
         <div class="extras-item">
             <label>
-                <input type="checkbox" value="${extra.name}" data-price="${extra.price}" ${item.extras && item.extras.some(e => e.name === extra.name) ? 'checked' : ''}>
+                <input type="checkbox" value="${extra.name}" data-price="${extra.price}" ${item.extras?.some(e => e.name === extra.name) ? 'checked' : ''}>
                 ${extra.name} (+${extra.price} ₽)
             </label>
         </div>
@@ -259,39 +218,29 @@ document.getElementById('extrasSaveBtn')?.addEventListener('click', () => {
     const item = cart[currentExtrasItemIndex];
     const selectedExtras = [];
     document.querySelectorAll('#extrasList input:checked').forEach(cb => {
-        selectedExtras.push({
-            name: cb.value,
-            price: parseInt(cb.dataset.price)
-        });
+        selectedExtras.push({ name: cb.value, price: parseInt(cb.dataset.price) });
     });
     item.extras = selectedExtras;
-    saveCart();
-    updateCartUI();
+    saveCart(); updateCartUI();
     document.getElementById('extrasModal').style.display = 'none';
     showToast('Добавки сохранены');
 });
 
 function addToCart(name, price) {
     const exist = cart.find(i => i.name === name);
-    if (exist) {
-        exist.quantity++;
-    } else {
-        cart.push({ name, price, quantity: 1, extras: [] });
-    }
-    saveCart();
-    updateCartUI();
+    if (exist) exist.quantity++;
+    else cart.push({ name, price, quantity: 1, extras: [] });
+    saveCart(); updateCartUI();
     showToast(`✅ ${name} добавлен в корзину`);
 }
 
 function renderMenu() {
     const container = document.getElementById('menuGrid');
     if (!container) return;
-    
     let filtered = menuData;
     if (currentFilter !== 'all') {
         filtered = menuData.filter(item => item.category === currentFilter);
     }
-    
     container.innerHTML = filtered.map(item => `
         <div class="menu-card">
             <div class="card-content">
@@ -299,14 +248,13 @@ function renderMenu() {
                     <span class="item-name">${escapeHtml(item.name)}</span>
                     <span class="item-price">${item.price} ₽</span>
                 </div>
-                <div style="font-size:0.7rem; color:#b45f2b; margin-top:5px;">${escapeHtml(item.category)}</div>
+                <div style="font-size:0.7rem; color:#b45f2b;">${escapeHtml(item.category)}</div>
             </div>
             <button class="btn-add" data-name="${escapeHtml(item.name)}" data-price="${item.price}">
                 <i class="fas fa-cart-plus"></i> В корзину
             </button>
         </div>
     `).join('');
-    
     document.querySelectorAll('.btn-add').forEach(btn => {
         btn.addEventListener('click', () => {
             addToCart(btn.dataset.name, parseInt(btn.dataset.price));
@@ -337,140 +285,81 @@ function initMaps() {
     });
 }
 
-function completeOrder(orderId) {
-    const index = orders.findIndex(o => o.id == orderId);
-    if (index !== -1) {
-        const completedOrder = orders[index];
-        completedOrders.unshift(completedOrder);
-        orders.splice(index, 1);
-        saveOrders();
-        renderAdminOrders();
-        showToast('✅ Заказ отмечен как выполненный');
-    }
-}
-
-function renderAdminOrders() {
-    // Активные заказы
-    const ordersContainer = document.getElementById('ordersList');
-    if (ordersContainer) {
-        if (orders.length === 0) {
-            ordersContainer.innerHTML = '<p style="text-align:center; padding:20px;">Нет активных заказов</p>';
-        } else {
-            ordersContainer.innerHTML = orders.map(order => `
-                <div class="admin-order-item" data-order-id="${order.id}">
-                    <div class="admin-order-header">
-                        <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
-                        <span class="admin-order-total">💰 ${order.total} ₽</span>
-                        <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
-                    </div>
-                    <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
-                    <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
-                    <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras && i.extras.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
-                    <div class="admin-order-actions">
-                        <button class="complete-order-btn" data-order-id="${order.id}"><i class="fas fa-check"></i> Заказ отдан</button>
-                        <button class="notify-client-btn" data-order-id="${order.id}" data-client-name="${escapeHtml(order.name)}"><i class="fas fa-bell"></i> Уведомить клиента</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-    }
-    
-    // Архив выполненных заказов
-    const completedContainer = document.getElementById('completedOrdersList');
-    if (completedContainer) {
-        if (completedOrders.length === 0) {
-            completedContainer.innerHTML = '<p style="text-align:center; padding:20px;">Нет выполненных заказов</p>';
-        } else {
-            completedContainer.innerHTML = completedOrders.map(order => `
-                <div class="admin-order-item">
-                    <div class="admin-order-header">
-                        <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
-                        <span class="admin-order-total">💰 ${order.total} ₽</span>
-                        <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
-                    </div>
-                    <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
-                    <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
-                    <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras && i.extras.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
-                </div>
-            `).join('');
-        }
-    }
-    
-    document.querySelectorAll('.complete-order-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            completeOrder(parseInt(btn.dataset.orderId));
-        });
-    });
-    document.querySelectorAll('.notify-client-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const clientName = btn.dataset.clientName;
-            const orderId = btn.dataset.orderId;
-            sendNotificationToClient(
-                'Мастер Вкуса',
-                `${clientName}, ваш заказ готов! Можете прийти или ожидайте курьера 🔥`,
-                `order_${orderId}`
-            );
-            showToast(`🔔 Уведомление отправлено ${clientName}`);
-        });
-    });
+function sendToMax(message) {
+    window.open(`https://max.ru/u/${PHONE_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
 function addOrder(order) {
     orders.unshift(order);
     saveOrders();
     renderAdminOrders();
-    sendNotificationToClient(
-        'Мастер Вкуса', 
-        `${order.name}, ваш заказ принят! Сумма: ${order.total} ₽. Ожидайте подтверждения.`,
-        `order_${order.id}`
-    );
+    sendToMax(`🍔 НОВЫЙ ЗАКАЗ MASTER ВКУСА 🍔\n\n👤 ${order.name} ${order.lastName}\n📞 ${order.phone}\n📦 ${order.deliveryMethod}\n${order.address ? `📍 ${order.address}\n` : ''}💳 ${order.payment}\n\n📋 ${order.items.map(i => `${i.name} x${i.quantity}${i.extras?.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}\n💰 ${order.total} ₽`);
+    sendNotificationToClient('Мастер Вкуса', `${order.name} ${order.lastName}, ваш заказ принят! Сумма: ${order.total} ₽`);
 }
+
+function renderAdminOrders() {
+    const container = document.getElementById('ordersList');
+    if (!container) return;
+    if (orders.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:20px;">Нет заказов</p>';
+        return;
+    }
+    container.innerHTML = orders.map(order => `
+        <div class="admin-order-item">
+            <div class="admin-order-header">
+                <span class="admin-order-customer">👤 ${escapeHtml(order.name)} ${escapeHtml(order.lastName)}</span>
+                <span class="admin-order-total">💰 ${order.total} ₽</span>
+                <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
+            </div>
+            <div>📞 ${escapeHtml(order.phone)}</div>
+            <div>📦 ${escapeHtml(order.deliveryMethod)}${order.address ? ` • ${escapeHtml(order.address)}` : ''}</div>
+            <div>💳 ${order.payment}</div>
+            <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras?.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('deliveryMethod')?.addEventListener('change', function() {
+    const addressBlock = document.getElementById('addressBlock');
+    addressBlock.style.display = this.value === 'Доставка' ? 'block' : 'none';
+});
 
 document.getElementById('orderForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('customerName').value.trim();
-    const address = document.getElementById('customerAddress').value.trim();
+    const lastName = document.getElementById('customerLastName').value.trim();
+    const phone = document.getElementById('customerPhone').value.trim();
+    const deliveryMethod = document.getElementById('deliveryMethod').value;
+    let address = '';
+    if (deliveryMethod === 'Доставка') {
+        address = document.getElementById('customerAddress').value.trim();
+        if (!address) { showToast('❌ Укажите адрес доставки', true); return; }
+    }
     const payment = document.getElementById('paymentMethod').value;
     
-    if (!name || !address) {
-        showToast('❌ Заполните имя и адрес', true);
-        return;
-    }
-    if (cart.length === 0) {
-        showToast('❌ Корзина пуста', true);
-        return;
-    }
+    if (!name || !lastName || !phone) { showToast('❌ Укажите имя, фамилию и телефон', true); return; }
+    if (cart.length === 0) { showToast('❌ Корзина пуста', true); return; }
     
     let total = 0;
     cart.forEach(item => {
         let itemTotal = item.price * item.quantity;
-        if (item.extras) {
-            item.extras.forEach(extra => {
-                itemTotal += extra.price * item.quantity;
-            });
-        }
+        if (item.extras) item.extras.forEach(extra => { itemTotal += extra.price * item.quantity; });
         total += itemTotal;
     });
     
     addOrder({
-        id: Date.now(),
-        name,
-        address,
-        payment,
+        id: Date.now(), name, lastName, phone, deliveryMethod, address, payment,
         items: cart.map(i => ({ name: i.name, quantity: i.quantity, extras: i.extras })),
-        total,
-        date: new Date().toISOString()
+        total, date: new Date().toISOString()
     });
     
-    cart = [];
-    saveCart();
-    updateCartUI();
+    cart = []; saveCart(); updateCartUI();
     document.getElementById('orderModal').style.display = 'none';
     document.getElementById('orderForm').reset();
+    document.getElementById('addressBlock').style.display = 'none';
     showToast('✅ Заказ отправлен!');
 });
 
-// Модалки
 const cartModal = document.getElementById('cartModal');
 const orderModal = document.getElementById('orderModal');
 const adminModal = document.getElementById('adminModal');
@@ -482,10 +371,7 @@ document.getElementById('mobileCartLink')?.addEventListener('click', (e) => {
     document.getElementById('mobileNav')?.classList.remove('active');
 });
 document.getElementById('checkoutBtn')?.addEventListener('click', () => {
-    if (cart.length === 0) {
-        showToast('❌ Корзина пуста', true);
-        return;
-    }
+    if (cart.length === 0) { showToast('❌ Корзина пуста', true); return; }
     cartModal.style.display = 'none';
     orderModal.style.display = 'block';
 });
@@ -504,7 +390,6 @@ window.onclick = (e) => {
     if (e.target === document.getElementById('extrasModal')) document.getElementById('extrasModal').style.display = 'none';
 };
 
-// Админ панель
 document.getElementById('adminPanelBtn')?.addEventListener('click', () => adminModal.style.display = 'block');
 document.getElementById('mobileAdminLink')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -513,30 +398,30 @@ document.getElementById('mobileAdminLink')?.addEventListener('click', (e) => {
 });
 document.getElementById('adminLoginForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const pwd = document.getElementById('adminPassword').value;
-    if (pwd === ADMIN_PASSWORD) {
+    if (document.getElementById('adminPassword').value === ADMIN_PASSWORD) {
         document.getElementById('adminLoginForm').style.display = 'none';
         document.getElementById('adminContent').style.display = 'block';
         renderAdminOrders();
         showToast('Добро пожаловать в админ панель');
-    } else {
-        showToast('❌ Неверный пароль', true);
-    }
+    } else showToast('❌ Неверный пароль', true);
 });
 
-// Кнопка включения уведомлений
-document.getElementById('enableNotificationsBtn')?.addEventListener('click', requestNotificationPermission);
-document.getElementById('mobileEnableNotificationsBtn')?.addEventListener('click', requestNotificationPermission);
+document.getElementById('themeToggle')?.addEventListener('click', () => {
+    document.body.classList.toggle('dark-theme');
+    localStorage.setItem('masterTheme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+});
+document.getElementById('themeToggleMobile')?.addEventListener('click', () => {
+    document.body.classList.toggle('dark-theme');
+    localStorage.setItem('masterTheme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+    document.getElementById('mobileNav')?.classList.remove('active');
+});
+if (localStorage.getItem('masterTheme') === 'dark') document.body.classList.add('dark-theme');
 
-// Бургер
 const burger = document.getElementById('burgerMenu');
 const mobileNav = document.getElementById('mobileNav');
 if (burger && mobileNav) {
-    burger.addEventListener('click', () => {
-        burger.classList.toggle('active');
-        mobileNav.classList.toggle('active');
-    });
-    document.querySelectorAll('.mobile-link, .notif-btn-mobile').forEach(link => {
+    burger.addEventListener('click', () => { burger.classList.toggle('active'); mobileNav.classList.toggle('active'); });
+    document.querySelectorAll('.mobile-link, .theme-btn-mobile').forEach(link => {
         link.addEventListener('click', () => {
             burger.classList.remove('active');
             mobileNav.classList.remove('active');
@@ -544,6 +429,7 @@ if (burger && mobileNav) {
     });
 }
 
+initNotifications();
 loadCart();
 renderMenu();
 initFilters();
