@@ -22,14 +22,11 @@
             <li><a href="#contacts" class="mobile-link">📞 Контакты</a></li>
             <li><a href="#" id="mobileCartLink">🛒 Корзина <span id="mobileCartCount">0</span></a></li>
             <li><a href="#" id="mobileAdminLink">🛡️ Админ</a></li>
-            <li><button id="mobileEnableNotificationsBtn" class="notif-btn-mobile">🔔 Включить уведомления</button></li>
+            <li><button id="themeToggleMobile" class="theme-btn-mobile">🌙 Тёмная тема</button></li>
         </ul>
     </nav>
 
     <div id="toast" class="toast"></div>
-
-    <!-- Плавающая кнопка включения уведомлений -->
-    <button id="enableNotificationsBtn" class="enable-notif-btn"><i class="fas fa-bell"></i> Включить уведомления</button>
 
     <header class="header">
         <div class="container">
@@ -143,18 +140,7 @@
         </div>
     </div>
 
-    <!-- Модалка добавок -->
-    <div id="extrasModal" class="modal">
-        <div class="modal-content">
-            <span class="close-extras">&times;</span>
-            <h2><i class="fas fa-plus-circle"></i> Добавки</h2>
-            <p style="margin-bottom:15px;">Выберите добавки для <strong id="extrasItemName"></strong></p>
-            <div id="extrasList" class="extras-list"></div>
-            <button id="extrasSaveBtn" class="btn-submit">Сохранить →</button>
-        </div>
-    </div>
-
-    <!-- Модалка заказа -->
+    <!-- Модалка оформления заказа (ВСЕ ПОЛЯ НА МЕСТЕ) -->
     <div id="orderModal" class="modal">
         <div class="modal-content">
             <span class="close-order">&times;</span>
@@ -162,15 +148,46 @@
             <form id="orderForm">
                 <label>Ваше имя</label>
                 <input type="text" id="customerName" placeholder="Алексей" required>
-                <label>Адрес доставки</label>
-                <input type="text" id="customerAddress" placeholder="ул. Красная, 12, кв. 5" required>
+                
+                <label>Ваша фамилия</label>
+                <input type="text" id="customerLastName" placeholder="Иванов" required>
+                
+                <label>Телефон</label>
+                <input type="tel" id="customerPhone" placeholder="+7 999 123 45 67" required>
+                
+                <label>Способ получения</label>
+                <select id="deliveryMethod" required>
+                    <option value="Самовывоз">📦 Самовывоз (Анапское шоссе 91а)</option>
+                    <option value="Доставка">🚚 Доставка курьером</option>
+                    <option value="В заведении">🍽️ Поесть в заведении</option>
+                </select>
+                
+                <div id="addressBlock" style="display: none;">
+                    <label>Адрес доставки</label>
+                    <input type="text" id="customerAddress" placeholder="ул. Красная, 12, кв. 5">
+                </div>
+                
                 <label>Способ оплаты</label>
                 <select id="paymentMethod">
-                    <option value="Наличные">Наличные курьеру</option>
-                    <option value="Карта">Карта курьеру</option>
+                    <option value="Наличные">Наличные</option>
+                    <option value="Карта">Карта</option>
+                    <option value="СБП">СБП (QR-код)</option>
+                    <option value="Криптовалюта">Криптовалюта</option>
                 </select>
+                
                 <button type="submit" class="btn-submit">Отправить заказ →</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Модалка добавок -->
+    <div id="extrasModal" class="modal">
+        <div class="modal-content">
+            <span class="close-extras">&times;</span>
+            <h2><i class="fas fa-plus-circle"></i> Добавки</h2>
+            <p><strong id="extrasItemName"></strong></p>
+            <div id="extrasList" class="extras-list"></div>
+            <button id="extrasSaveBtn" class="btn-submit">Сохранить →</button>
         </div>
     </div>
 
@@ -186,13 +203,9 @@
             </form>
             <div id="adminContent" style="display:none;">
                 <div class="admin-header">
-                    <h3>📋 Активные заказы</h3>
+                    <h3>📋 Заказы клиентов</h3>
                 </div>
                 <div id="ordersList" class="admin-orders-list"></div>
-                <div class="admin-header" style="margin-top:30px;">
-                    <h3>📦 Архив (выполненные заказы)</h3>
-                </div>
-                <div id="completedOrdersList" class="admin-orders-list"></div>
             </div>
         </div>
     </div>
