@@ -76,33 +76,44 @@ let cart = [];
 let currentFilter = 'all';
 let currentExtrasItemIndex = null;
 let orders = [];
+let completedOrders = [];
 
 // Push-уведомления
 let notificationPermission = false;
 
-async function initNotifications() {
+async function requestNotificationPermission() {
     if ('Notification' in window) {
         const permission = await Notification.requestPermission();
         notificationPermission = permission === 'granted';
         if (notificationPermission) {
-            console.log('Уведомления разрешены');
-            showToast('🔔 Уведомления включены');
+            showToast('🔔 Уведомления включены!');
+        } else {
+            showToast('❌ Уведомления не разрешены', true);
         }
+    } else {
+        showToast('❌ Ваш браузер не поддерживает уведомления', true);
     }
 }
 
-function sendNotificationToClient(title, body, orderId = null) {
+function sendNotificationToClient(title, body, tag = null) {
     if (notificationPermission) {
-        new Notification(title, {
-            body: body,
-            icon: 'https://master-vkusa-delivery.vercel.app/logo.jpg',
-            badge: 'https://master-vkusa-delivery.vercel.app/logo.jpg',
-            tag: orderId ? `order_${orderId}` : 'general',
-            renotify: true
-        });
-        return true;
+        try {
+            new Notification(title, {
+                body: body,
+                icon: '/logo.jpg',
+                badge: '/logo.jpg',
+                tag: tag,
+                renotify: true
+            });
+            return true;
+        } catch(e) {
+            console.log('Ошибка уведомления:', e);
+            return false;
+        }
+    } else {
+        showToast('❌ Сначала включите уведомления через кнопку 🔔', true);
+        return false;
     }
-    return false;
 }
 
 // Корзина
@@ -111,6 +122,8 @@ function loadCart() {
     if (saved) cart = JSON.parse(saved);
     const savedOrders = localStorage.getItem('masterVkusaOrders');
     if (savedOrders) orders = JSON.parse(savedOrders);
+    const savedCompleted = localStorage.getItem('masterVkusaCompletedOrders');
+    if (savedCompleted) completedOrders = JSON.parse(savedCompleted);
     updateCartUI();
     renderAdminOrders();
 }
@@ -121,6 +134,7 @@ function saveCart() {
 
 function saveOrders() {
     localStorage.setItem('masterVkusaOrders', JSON.stringify(orders));
+    localStorage.setItem('masterVkusaCompletedOrders', JSON.stringify(completedOrders));
 }
 
 function showToast(message, isError = false) {
@@ -323,58 +337,93 @@ function initMaps() {
     });
 }
 
-function addOrder(order) {
-    orders.unshift(order);
-    saveOrders();
-    renderAdminOrders();
-    // Отправляем уведомление конкретному клиенту
-    sendNotificationToClient(
-        'Мастер Вкуса', 
-        `${order.name}, ваш заказ принят! Сумма: ${order.total} ₽. Ожидайте подтверждения.`,
-        order.id
-    );
+function completeOrder(orderId) {
+    const index = orders.findIndex(o => o.id == orderId);
+    if (index !== -1) {
+        const completedOrder = orders[index];
+        completedOrders.unshift(completedOrder);
+        orders.splice(index, 1);
+        saveOrders();
+        renderAdminOrders();
+        showToast('✅ Заказ отмечен как выполненный');
+    }
 }
 
 function renderAdminOrders() {
-    const container = document.getElementById('ordersList');
-    if (!container) return;
-    if (orders.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px;">Нет заказов</p>';
-        return;
+    // Активные заказы
+    const ordersContainer = document.getElementById('ordersList');
+    if (ordersContainer) {
+        if (orders.length === 0) {
+            ordersContainer.innerHTML = '<p style="text-align:center; padding:20px;">Нет активных заказов</p>';
+        } else {
+            ordersContainer.innerHTML = orders.map(order => `
+                <div class="admin-order-item" data-order-id="${order.id}">
+                    <div class="admin-order-header">
+                        <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
+                        <span class="admin-order-total">💰 ${order.total} ₽</span>
+                        <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
+                    </div>
+                    <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
+                    <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
+                    <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras && i.extras.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
+                    <div class="admin-order-actions">
+                        <button class="complete-order-btn" data-order-id="${order.id}"><i class="fas fa-check"></i> Заказ отдан</button>
+                        <button class="notify-client-btn" data-order-id="${order.id}" data-client-name="${escapeHtml(order.name)}"><i class="fas fa-bell"></i> Уведомить клиента</button>
+                    </div>
+                </div>
+            `).join('');
+        }
     }
-    container.innerHTML = orders.map(order => `
-        <div class="admin-order-item" data-order-id="${order.id}">
-            <div class="admin-order-header">
-                <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
-                <span class="admin-order-total">💰 ${order.total} ₽</span>
-                <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
-            </div>
-            <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
-            <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
-            <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras && i.extras.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
-            <div class="admin-order-actions" style="margin-top:12px; display:flex; gap:10px;">
-                <button class="notify-client-btn" data-order-id="${order.id}" data-client-name="${escapeHtml(order.name)}" style="background:#ff7e33; border:none; padding:6px 16px; border-radius:40px; color:white; cursor:pointer;">
-                    <i class="fas fa-bell"></i> Отправить уведомление "${order.name}"
-                </button>
-            </div>
-        </div>
-    `).join('');
     
+    // Архив выполненных заказов
+    const completedContainer = document.getElementById('completedOrdersList');
+    if (completedContainer) {
+        if (completedOrders.length === 0) {
+            completedContainer.innerHTML = '<p style="text-align:center; padding:20px;">Нет выполненных заказов</p>';
+        } else {
+            completedContainer.innerHTML = completedOrders.map(order => `
+                <div class="admin-order-item">
+                    <div class="admin-order-header">
+                        <span class="admin-order-customer">👤 ${escapeHtml(order.name)}</span>
+                        <span class="admin-order-total">💰 ${order.total} ₽</span>
+                        <span style="font-size:0.7rem;">${new Date(order.date).toLocaleString()}</span>
+                    </div>
+                    <div class="admin-order-address">📍 ${escapeHtml(order.address)}</div>
+                    <div class="admin-order-payment">💳 Оплата: ${order.payment}</div>
+                    <div class="admin-order-items">📋 ${order.items.map(i => `${escapeHtml(i.name)} x${i.quantity}${i.extras && i.extras.length ? ' + ' + i.extras.map(e => e.name).join(', ') : ''}`).join(', ')}</div>
+                </div>
+            `).join('');
+        }
+    }
+    
+    document.querySelectorAll('.complete-order-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            completeOrder(parseInt(btn.dataset.orderId));
+        });
+    });
     document.querySelectorAll('.notify-client-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const clientName = btn.dataset.clientName;
             const orderId = btn.dataset.orderId;
-            const order = orders.find(o => o.id == orderId);
-            if (order) {
-                sendNotificationToClient(
-                    'Мастер Вкуса',
-                    `${clientName}, ваш заказ готов! Можете прийти или ожидайте курьера 🔥`,
-                    orderId
-                );
-                showToast(`✅ Уведомление отправлено ${clientName}`);
-            }
+            sendNotificationToClient(
+                'Мастер Вкуса',
+                `${clientName}, ваш заказ готов! Можете прийти или ожидайте курьера 🔥`,
+                `order_${orderId}`
+            );
+            showToast(`🔔 Уведомление отправлено ${clientName}`);
         });
     });
+}
+
+function addOrder(order) {
+    orders.unshift(order);
+    saveOrders();
+    renderAdminOrders();
+    sendNotificationToClient(
+        'Мастер Вкуса', 
+        `${order.name}, ваш заказ принят! Сумма: ${order.total} ₽. Ожидайте подтверждения.`,
+        `order_${order.id}`
+    );
 }
 
 document.getElementById('orderForm')?.addEventListener('submit', (e) => {
@@ -475,6 +524,10 @@ document.getElementById('adminLoginForm')?.addEventListener('submit', (e) => {
     }
 });
 
+// Кнопка включения уведомлений
+document.getElementById('enableNotificationsBtn')?.addEventListener('click', requestNotificationPermission);
+document.getElementById('mobileEnableNotificationsBtn')?.addEventListener('click', requestNotificationPermission);
+
 // Бургер
 const burger = document.getElementById('burgerMenu');
 const mobileNav = document.getElementById('mobileNav');
@@ -483,16 +536,13 @@ if (burger && mobileNav) {
         burger.classList.toggle('active');
         mobileNav.classList.toggle('active');
     });
-    document.querySelectorAll('.mobile-link').forEach(link => {
+    document.querySelectorAll('.mobile-link, .notif-btn-mobile').forEach(link => {
         link.addEventListener('click', () => {
             burger.classList.remove('active');
             mobileNav.classList.remove('active');
         });
     });
 }
-
-// Запрос уведомлений при загрузке
-initNotifications();
 
 loadCart();
 renderMenu();
