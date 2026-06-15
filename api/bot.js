@@ -1,4 +1,4 @@
-// bot.js - Telegram-бот для МАСТЕР ВКУСА (гриль-бар, полное меню)
+// bot.js - Telegram-бот для МАСТЕР ВКУСА (с полноценной корзиной, инлайн-кнопками, способами получения)
 const token = '8979308670:AAFgcmQN6lmmEOJcf1E0N41OfxVXldNt8k8';
 const TELEGRAM_API = `https://api.telegram.org/bot${token}`;
 
@@ -117,7 +117,7 @@ async function sendMessage(chatId, text, keyboard = null) {
 
 const mainKeyboard = {
     keyboard: [
-        [{ text: '🍔 Меню' }, { text: '🛒 Сделать заказ' }],
+        [{ text: '🍔 Меню' }, { text: '🛒 Моя корзина' }],
         [{ text: '📍 Адрес и контакты' }, { text: '❌ Отмена' }]
     ],
     resize_keyboard: true
@@ -138,18 +138,168 @@ async function handleMenu(chatId) {
         if (cat.items.length > 4) text += `• ...ещё ${cat.items.length - 4} позиций\n`;
         text += '\n';
     });
-    text += '📌 Чтобы заказать, нажмите «🛒 Сделать заказ»';
+    text += '📌 Чтобы сделать заказ, нажмите «🛒 Моя корзина» → «➕ Добавить товар»';
     await sendMessage(chatId, text, mainKeyboard);
 }
 
-async function handleOrderStart(chatId) {
-    userStates[chatId] = { step: 'select_category', cart: [] };
-    let text = '🛒 <b>Оформление заказа</b>\n\nВыберите категорию:\n';
-    categories.forEach(cat => {
-        text += `\n<b>${cat.id}.</b> ${cat.name}`;
+async function showCart(chatId, userId) {
+    const state = userStates[chatId];
+    const cart = state?.cart || [];
+    
+    if (cart.length === 0) {
+        await sendMessage(chatId, '🛒 <b>Ваша корзина пуста</b>\n\nДобавьте товары через меню "Добавить товар"', {
+            inline_keyboard: [
+                [{ text: '➕ Добавить товар', callback_data: 'add_item' }],
+                [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+            ]
+        });
+        return;
+    }
+    
+    let total = 0;
+    let itemsText = '';
+    cart.forEach((item, idx) => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        itemsText += `${idx+1}. ${item.name} x${item.quantity} = ${itemTotal} ₽\n`;
     });
-    text += '\n\n🔢 Введите номер категории';
+    
+    const cartText = `🛒 <b>ВАША КОРЗИНА</b>\n\n${itemsText}\n━━━━━━━━━━━━━━\n💰 <b>ИТОГО: ${total} ₽</b>`;
+    
+    await sendMessage(chatId, cartText, {
+        inline_keyboard: [
+            [{ text: '➕ Добавить товар', callback_data: 'add_item' }],
+            [{ text: '🗑 Очистить корзину', callback_data: 'clear_cart' }],
+            [{ text: '✅ Оформить заказ', callback_data: 'checkout' }],
+            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+        ]
+    });
+}
+
+async function handleAddItem(chatId) {
+    userStates[chatId] = { step: 'select_category', cart: userStates[chatId]?.cart || [] };
+    let text = '🍽️ <b>Выберите категорию</b>\n\n';
+    categories.forEach(cat => {
+        text += `<b>${cat.id}.</b> ${cat.name}\n`;
+    });
+    text += '\n🔢 Введите номер категории';
     await sendMessage(chatId, text);
+}
+
+async function handleClearCart(chatId) {
+    if (userStates[chatId]) {
+        userStates[chatId].cart = [];
+    }
+    await sendMessage(chatId, '🗑 Корзина очищена!', {
+        inline_keyboard: [[{ text: '➕ Добавить товар', callback_data: 'add_item' }]]
+    });
+}
+
+async function handleCheckout(chatId, userId, userName) {
+    const cart = userStates[chatId]?.cart || [];
+    if (cart.length === 0) {
+        await sendMessage(chatId, '❌ Корзина пуста. Добавьте товары перед оформлением.');
+        return;
+    }
+    userStates[chatId].step = 'select_delivery';
+    await sendMessage(chatId, '🚚 <b>Выберите способ получения</b>', {
+        inline_keyboard: [
+            [{ text: '🚚 Доставка', callback_data: 'delivery_delivery' }],
+            [{ text: '📦 Самовывоз', callback_data: 'delivery_pickup' }],
+            [{ text: '🍽️ Поесть в заведении', callback_data: 'delivery_eat' }]
+        ]
+    });
+}
+
+async function handleDeliverySelection(chatId, deliveryType, userId, userName) {
+    userStates[chatId].deliveryType = deliveryType;
+    userStates[chatId].step = 'enter_phone';
+    await sendMessage(chatId, `✅ Вы выбрали: <b>${deliveryType === 'delivery' ? 'Доставка' : deliveryType === 'pickup' ? 'Самовывоз' : 'Поесть в заведении'}</b>\n\n📞 Введите ваш номер телефона для связи:`);
+}
+
+async function handleEnterPhone(chatId, phone) {
+    userStates[chatId].phone = phone;
+    userStates[chatId].step = 'enter_address';
+    await sendMessage(chatId, `📞 Телефон: ${phone}\n\n📍 Введите адрес доставки (или напишите "Самовывоз"):`);
+}
+
+async function handleEnterAddress(chatId, address, userId, userName) {
+    userStates[chatId].address = address;
+    const cart = userStates[chatId].cart;
+    const phone = userStates[chatId].phone;
+    const deliveryType = userStates[chatId].deliveryType;
+    const deliveryText = deliveryType === 'delivery' ? '🚚 Доставка' : deliveryType === 'pickup' ? '📦 Самовывоз' : '🍽️ Поесть в заведении';
+    
+    let total = 0;
+    let itemsText = '';
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        itemsText += `• ${item.name} x${item.quantity} = ${itemTotal} ₽\n`;
+    });
+    
+    const confirmText = `🛒 <b>ПОДТВЕРДИТЕ ЗАКАЗ</b>\n\n${itemsText}\n━━━━━━━━━━━━━━\n💰 <b>ИТОГО: ${total} ₽</b>\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n🚚 ${deliveryText}\n\n✅ Подтвердить — нажмите кнопку ниже`;
+    
+    userStates[chatId].step = 'confirm';
+    await sendMessage(chatId, confirmText, {
+        inline_keyboard: [
+            [{ text: '✅ Подтвердить заказ', callback_data: 'confirm_order' }],
+            [{ text: '❌ Отменить', callback_data: 'cancel_order' }]
+        ]
+    });
+}
+
+async function handleConfirmOrder(chatId, userId, userName) {
+    const cart = userStates[chatId].cart;
+    const phone = userStates[chatId].phone;
+    const address = userStates[chatId].address;
+    const deliveryType = userStates[chatId].deliveryType;
+    const deliveryText = deliveryType === 'delivery' ? '🚚 Доставка' : deliveryType === 'pickup' ? '📦 Самовывоз' : '🍽️ Поесть в заведении';
+    
+    let total = 0;
+    let itemsText = '';
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        itemsText += `• ${item.name} x${item.quantity} = ${itemTotal} ₽\n`;
+    });
+    
+    await sendMessage(chatId, `✅ <b>ЗАКАЗ ПРИНЯТ!</b>\n\n${itemsText}\n━━━━━━━━━━━━━━\n💰 ИТОГО: ${total} ₽\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n🚚 ${deliveryText}\n\n🍔 Готовим ваш заказ! Ожидайте звонка от оператора.\n\nСпасибо, что выбрали МАСТЕР ВКУСА! 🔥`, mainKeyboard);
+    
+    // Уведомление админам
+    for (const adminId of adminIds) {
+        await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: adminId,
+                text: `🆕 <b>НОВЫЙ ЗАКАЗ MASTER ВКУСА!</b>\n\n👤 Клиент: ${userName}\n🆔 ID: ${userId}\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n🚚 ${deliveryText}\n\n📋 <b>ЗАКАЗ:</b>\n${itemsText}\n💰 <b>ИТОГО: ${total} ₽</b>`,
+                parse_mode: 'HTML',
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [[{ text: '✅ Заказ готов', callback_data: `notify_${userId}` }]]
+                })
+            })
+        });
+    }
+    
+    delete userStates[chatId];
+}
+
+async function handleNotifyClient(adminId, userId, callbackQueryId) {
+    await fetch(`${TELEGRAM_API}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: userId,
+            text: '✅ <b>Ваш заказ готов!</b>\n\nПриходите в Мастер Вкуса по адресу: Анапское шоссе 91а\n\nЖдём вас! 🔥',
+            parse_mode: 'HTML'
+        })
+    });
+    await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callback_query_id: callbackQueryId, text: 'Уведомление отправлено!' })
+    });
 }
 
 async function handleAddress(chatId) {
@@ -157,27 +307,49 @@ async function handleAddress(chatId) {
     await sendMessage(chatId, text, mainKeyboard);
 }
 
-async function notifyAdmins(order, userId, userName, phone, address) {
-    let itemsText = '';
-    let total = 0;
-    order.forEach(item => {
-        itemsText += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
-        total += item.price * item.quantity;
-    });
-    const text = `🆕 <b>НОВЫЙ ЗАКАЗ MASTER ВКУСА!</b>\n\n👤 Клиент: ${userName}\n🆔 ID: ${userId}\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n\n📋 <b>ЗАКАЗ:</b>\n${itemsText}\n💰 <b>ИТОГО: ${total} ₽</b>`;
-    for (const adminId of adminIds) {
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: adminId, text: text, parse_mode: 'HTML' })
-        });
-    }
-}
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(200).send('OK');
     
-    const { message } = req.body;
+    const { message, callback_query } = req.body;
+    
+    if (callback_query) {
+        const chatId = callback_query.message.chat.id;
+        const data = callback_query.data;
+        const userId = callback_query.from.id;
+        const userName = callback_query.from.first_name || callback_query.from.username || 'Клиент';
+        
+        if (data === 'add_item') {
+            await handleAddItem(chatId);
+        } else if (data === 'clear_cart') {
+            await handleClearCart(chatId);
+        } else if (data === 'checkout') {
+            await handleCheckout(chatId, userId, userName);
+        } else if (data === 'back_to_menu') {
+            await sendMessage(chatId, 'Выберите действие:', mainKeyboard);
+        } else if (data === 'delivery_delivery') {
+            await handleDeliverySelection(chatId, 'delivery', userId, userName);
+        } else if (data === 'delivery_pickup') {
+            await handleDeliverySelection(chatId, 'pickup', userId, userName);
+        } else if (data === 'delivery_eat') {
+            await handleDeliverySelection(chatId, 'eat', userId, userName);
+        } else if (data === 'confirm_order') {
+            await handleConfirmOrder(chatId, userId, userName);
+        } else if (data === 'cancel_order') {
+            delete userStates[chatId];
+            await sendMessage(chatId, '❌ Заказ отменён.', mainKeyboard);
+        } else if (data.startsWith('notify_')) {
+            const clientId = parseInt(data.split('_')[1]);
+            await handleNotifyClient(chatId, clientId, callback_query.id);
+        }
+        
+        await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callback_query_id: callback_query.id })
+        });
+        return res.status(200).send('OK');
+    }
+    
     if (!message) return res.status(200).send('OK');
     
     const chatId = message.chat.id;
@@ -192,8 +364,8 @@ export default async function handler(req, res) {
         else if (text === '🍔 Меню') {
             await handleMenu(chatId);
         }
-        else if (text === '🛒 Сделать заказ') {
-            await handleOrderStart(chatId);
+        else if (text === '🛒 Моя корзина') {
+            await showCart(chatId, userId);
         }
         else if (text === '📍 Адрес и контакты') {
             await handleAddress(chatId);
@@ -212,7 +384,7 @@ export default async function handler(req, res) {
                 category.items.forEach((item, idx) => {
                     itemText += `<b>${idx + 1}.</b> ${item.name} — ${item.price} ₽\n`;
                 });
-                itemText += '\n🔢 Введите номер товара (или 0 чтобы завершить заказ)';
+                itemText += '\n🔢 Введите номер товара (или 0 чтобы завершить)';
                 await sendMessage(chatId, itemText);
             } else {
                 await sendMessage(chatId, '❌ Неверная категория. Введите номер из списка:');
@@ -227,21 +399,8 @@ export default async function handler(req, res) {
                 userStates[chatId].step = 'select_quantity';
                 await sendMessage(chatId, `✅ Вы выбрали: <b>${selectedItem.name}</b> (${selectedItem.price} ₽)\n\n🔢 Введите количество (1-99):`);
             } else if (text === '0') {
-                const cart = userStates[chatId].cart || [];
-                if (cart.length === 0) {
-                    await sendMessage(chatId, '🛒 Корзина пуста. Добавьте товары.', mainKeyboard);
-                    delete userStates[chatId];
-                } else {
-                    userStates[chatId].step = 'enter_phone';
-                    let summary = '🛒 <b>Ваш заказ</b>\n\n';
-                    let total = 0;
-                    cart.forEach(item => {
-                        summary += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
-                        total += item.price * item.quantity;
-                    });
-                    summary += `\n💰 <b>ИТОГО: ${total} ₽</b>\n\n📞 Введите ваш номер телефона для связи:`;
-                    await sendMessage(chatId, summary);
-                }
+                userStates[chatId].step = 'select_category';
+                await sendMessage(chatId, 'Можете продолжить добавление товаров или нажмите "Моя корзина" для оформления.');
             } else {
                 await sendMessage(chatId, '❌ Неверный номер. Введите номер товара из списка:');
             }
@@ -257,52 +416,16 @@ export default async function handler(req, res) {
                     quantity: quantity
                 });
                 userStates[chatId].step = 'select_category';
-                await sendMessage(chatId, `✅ <b>${selectedItem.name}</b> x${quantity} добавлен в корзину!\n\nМожете продолжить добавление товаров или нажмите 0 чтобы завершить заказ.`);
+                await sendMessage(chatId, `✅ <b>${selectedItem.name}</b> x${quantity} добавлен в корзину!\n\nМожете продолжить добавление товаров или нажмите 0 чтобы завершить.`);
             } else {
                 await sendMessage(chatId, '❌ Введите количество от 1 до 99:');
             }
         }
         else if (userStates[chatId] && userStates[chatId].step === 'enter_phone') {
-            const phone = text;
-            userStates[chatId].phone = phone;
-            userStates[chatId].step = 'enter_address';
-            await sendMessage(chatId, `📞 Телефон: ${phone}\n\n📍 Введите адрес доставки (или напишите "Самовывоз"):`);
+            await handleEnterPhone(chatId, text);
         }
         else if (userStates[chatId] && userStates[chatId].step === 'enter_address') {
-            const address = text;
-            const cart = userStates[chatId].cart;
-            const phone = userStates[chatId].phone;
-            let summary = '🛒 <b>ПОДТВЕРДИТЕ ЗАКАЗ</b>\n\n';
-            let total = 0;
-            cart.forEach(item => {
-                summary += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
-                total += item.price * item.quantity;
-            });
-            summary += `\n💰 <b>ИТОГО: ${total} ₽</b>\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n\n✅ <b>Подтвердить</b> — напишите ДА\n❌ <b>Отменить</b> — напишите НЕТ`;
-            userStates[chatId].step = 'confirm';
-            userStates[chatId].address = address;
-            await sendMessage(chatId, summary);
-        }
-        else if (userStates[chatId] && userStates[chatId].step === 'confirm') {
-            if (text.toUpperCase() === 'ДА') {
-                const cart = userStates[chatId].cart;
-                const phone = userStates[chatId].phone;
-                const address = userStates[chatId].address;
-                let itemsText = '';
-                let total = 0;
-                cart.forEach(item => {
-                    itemsText += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
-                    total += item.price * item.quantity;
-                });
-                await sendMessage(chatId, `✅ <b>ЗАКАЗ ПРИНЯТ!</b>\n\n${itemsText}\n💰 ИТОГО: ${total} ₽\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n\n🍔 Готовим ваш заказ! Ожидайте звонка от оператора.\n\nСпасибо, что выбрали МАСТЕР ВКУСА! 🔥`, mainKeyboard);
-                await notifyAdmins(cart, userId, userName, phone, address);
-                delete userStates[chatId];
-            } else if (text.toUpperCase() === 'НЕТ') {
-                await sendMessage(chatId, '❌ Заказ отменён. Если захотите сделать заказ — нажмите 🛒 Сделать заказ', mainKeyboard);
-                delete userStates[chatId];
-            } else {
-                await sendMessage(chatId, '❓ Напишите <b>ДА</b> для подтверждения или <b>НЕТ</b> для отмены');
-            }
+            await handleEnterAddress(chatId, text, userId, userName);
         }
         else {
             await sendMessage(chatId, 'Используйте кнопки меню 👇', mainKeyboard);
