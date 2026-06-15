@@ -104,7 +104,6 @@ const categories = [
 
 const adminIds = [7878666092, 616565825];
 let userStates = {};
-let orders = [];
 
 async function sendMessage(chatId, text, keyboard = null) {
     const body = { chat_id: chatId, text: text, parse_mode: 'HTML' };
@@ -116,43 +115,34 @@ async function sendMessage(chatId, text, keyboard = null) {
     });
 }
 
-async function sendPhoto(chatId, photoUrl, caption = '') {
-    await fetch(`${TELEGRAM_API}/sendPhoto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, photo: photoUrl, caption: caption, parse_mode: 'HTML' })
-    });
-}
-
 const mainKeyboard = {
     keyboard: [
-        [{ text: '🍔 Меню' }, { text: '🛒 Корзина' }],
-        [{ text: '📍 Адрес и контакты' }, { text: '📞 Связаться с нами' }]
+        [{ text: '🍔 Меню' }, { text: '🛒 Сделать заказ' }],
+        [{ text: '📍 Адрес и контакты' }, { text: '❌ Отмена' }]
     ],
     resize_keyboard: true
 };
 
 async function handleStart(chatId) {
     const welcomeText = `🔥 <b>Добро пожаловать в МАСТЕР ВКУСА!</b> 🔥\n\n🍖 Гриль-бар на Анапском шоссе\n🥩 Мясо на углях, шаурма, бургеры, люля-кебаб\n🥤 Холодные напитки\n\n📍 Анапское шоссе 91а, Новороссийск\n🕒 Ежедневно с 10:00 до 22:00\n\n👇 <b>Сделайте заказ!</b> 👇`;
-    await sendPhoto(chatId, 'https://master-vkusa.vercel.app/logo.jpg', welcomeText);
-    await sendMessage(chatId, 'Выберите действие:', mainKeyboard);
+    await sendMessage(chatId, welcomeText, mainKeyboard);
 }
 
 async function handleMenu(chatId) {
     let text = '🍔 <b>МЕНЮ МАСТЕР ВКУСА</b> 🍔\n\n';
     categories.forEach(cat => {
         text += `<b>${cat.name}</b>\n`;
-        cat.items.slice(0, 5).forEach(item => {
+        cat.items.slice(0, 4).forEach(item => {
             text += `• ${item.name} — ${item.price} ₽\n`;
         });
-        if (cat.items.length > 5) text += `• ...ещё ${cat.items.length - 5} позиций\n`;
+        if (cat.items.length > 4) text += `• ...ещё ${cat.items.length - 4} позиций\n`;
         text += '\n';
     });
-    text += '📌 Чтобы заказать, нажмите «🛒 Корзина»';
+    text += '📌 Чтобы заказать, нажмите «🛒 Сделать заказ»';
     await sendMessage(chatId, text, mainKeyboard);
 }
 
-async function handleCartStart(chatId) {
+async function handleOrderStart(chatId) {
     userStates[chatId] = { step: 'select_category', cart: [] };
     let text = '🛒 <b>Оформление заказа</b>\n\nВыберите категорию:\n';
     categories.forEach(cat => {
@@ -163,21 +153,17 @@ async function handleCartStart(chatId) {
 }
 
 async function handleAddress(chatId) {
-    const text = '📍 <b>Наш адрес</b>\n\n🏠 г. Новороссийск, ул. Анапское шоссе 91а\n🚗 вход с парковки KFC\n\n🕒 <b>Режим работы:</b>\nЕжедневно с 10:00 до 22:00\n\n📞 <b>Телефон:</b>\n+7 989 240-56-59\n+7 988 000-01-09\n\n<a href="https://yandex.ru/maps/970/novorossiysk/house/anapskoye_shosse_91a/">🗺️ Открыть карту</a>';
-    await sendMessage(chatId, text, mainKeyboard);
-}
-
-async function handleContact(chatId) {
-    const text = '📞 <b>Свяжитесь с нами</b>\n\n📱 <b>Telegram:</b> @Temur_Zohan\n💬 <b>Instagram:</b> @temur89180650655t\n📞 <b>Телефон:</b> +7 989 240-56-59\n\n📍 <b>Адрес:</b> Анапское шоссе 91а\n\n🚀 Доставка по Новороссийску | Самовывоз';
+    const text = '📍 <b>Наш адрес</b>\n\n🏠 г. Новороссийск, ул. Анапское шоссе 91а\n🚗 вход с парковки KFC\n\n🕒 <b>Режим работы:</b>\nЕжедневно с 10:00 до 22:00\n\n📞 <b>Телефон:</b>\n+7 989 240-56-59\n+7 988 000-01-09\n\n🚀 Доставка | Самовывоз';
     await sendMessage(chatId, text, mainKeyboard);
 }
 
 async function notifyAdmins(order, userId, userName, phone, address) {
     let itemsText = '';
+    let total = 0;
     order.forEach(item => {
         itemsText += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ₽\n`;
+        total += item.price * item.quantity;
     });
-    const total = order.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     const text = `🆕 <b>НОВЫЙ ЗАКАЗ MASTER ВКУСА!</b>\n\n👤 Клиент: ${userName}\n🆔 ID: ${userId}\n📞 Телефон: ${phone}\n📍 Адрес: ${address}\n\n📋 <b>ЗАКАЗ:</b>\n${itemsText}\n💰 <b>ИТОГО: ${total} ₽</b>`;
     for (const adminId of adminIds) {
         await fetch(`${TELEGRAM_API}/sendMessage`, {
@@ -206,16 +192,13 @@ export default async function handler(req, res) {
         else if (text === '🍔 Меню') {
             await handleMenu(chatId);
         }
-        else if (text === '🛒 Корзина') {
-            await handleCartStart(chatId);
+        else if (text === '🛒 Сделать заказ') {
+            await handleOrderStart(chatId);
         }
         else if (text === '📍 Адрес и контакты') {
             await handleAddress(chatId);
         }
-        else if (text === '📞 Связаться с нами') {
-            await handleContact(chatId);
-        }
-        else if (text === '◀️ Отмена') {
+        else if (text === '❌ Отмена') {
             delete userStates[chatId];
             await sendMessage(chatId, 'Действие отменено. Выберите действие:', mainKeyboard);
         }
@@ -315,7 +298,7 @@ export default async function handler(req, res) {
                 await notifyAdmins(cart, userId, userName, phone, address);
                 delete userStates[chatId];
             } else if (text.toUpperCase() === 'НЕТ') {
-                await sendMessage(chatId, '❌ Заказ отменён. Если захотите сделать заказ — нажмите 🛒 Корзина', mainKeyboard);
+                await sendMessage(chatId, '❌ Заказ отменён. Если захотите сделать заказ — нажмите 🛒 Сделать заказ', mainKeyboard);
                 delete userStates[chatId];
             } else {
                 await sendMessage(chatId, '❓ Напишите <b>ДА</b> для подтверждения или <b>НЕТ</b> для отмены');
